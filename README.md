@@ -21,8 +21,8 @@ node cli/index.js
 ```
 
 The CLI:
-- Prompts for project/feature details
-- Asks 3-5 clarifying questions with lettered options
+- Prompts for a short brief
+- Runs an interactive interview (one question at a time)
 - Generates `tasks/prd-[feature-name].md` and `prd.json`
 - Prints both outputs to stdout
 - Emits a machine-readable summary JSON line at the end
