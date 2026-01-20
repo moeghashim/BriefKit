@@ -1,40 +1,81 @@
-import { generatePrdData } from "../../../lib/openai.js";
+import { generatePrdData, inferNamesFromBrief } from "../../../lib/openai.js";
 import { buildPrdJson, buildPrdMarkdown } from "../../../lib/prd.js";
 
 export const runtime = "nodejs";
 
+type InterviewTurn = {
+  question: string;
+  answer: string;
+};
+
+type FeatureOverride = {
+  name: string;
+  summary: string;
+  userStoryIds: string[];
+};
+
+function buildClarifyingAnswers(brief: string, interview: InterviewTurn[], summary?: string[]) {
+  const lines = interview.map((turn, index) => {
+    return `Q${index + 1}: ${turn.question}\nA${index + 1}: ${turn.answer}`;
+  });
+  const summaryBlock = Array.isArray(summary) && summary.length > 0
+    ? `Summary:\n${summary.map((item) => `- ${item}`).join("\n")}`
+    : "";
+  return [`Brief: ${brief}`, ...lines, summaryBlock].filter(Boolean).join("\n\n");
+}
+
+function applyFeatureOverrides(
+  features: FeatureOverride[] | undefined,
+  overrides: FeatureOverride[] | undefined
+) {
+  if (!overrides || overrides.length === 0) {
+    return features;
+  }
+  return (features || []).map((feature, index) => {
+    const override = overrides[index];
+    if (!override) {
+      return feature;
+    }
+    return {
+      ...feature,
+      name: override.name || feature.name,
+      summary: override.summary || feature.summary,
+      userStoryIds: Array.isArray(override.userStoryIds) && override.userStoryIds.length > 0
+        ? override.userStoryIds
+        : feature.userStoryIds
+    };
+  });
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const {
-      projectName,
-      featureName,
-      branchName,
-      description,
-      answers
-    } = body || {};
+    const { brief, interview, interviewSummary, featureOverrides } = body || {};
 
-    if (!projectName || !featureName || !description) {
-      return Response.json({ error: "Missing required fields" }, { status: 400 });
+    if (!brief) {
+      return Response.json({ error: "Brief is required" }, { status: 400 });
     }
 
-    const resolvedBranch = branchName || `feature/${featureName.toLowerCase().replace(/\s+/g, "-")}`;
+    const inferred = await inferNamesFromBrief({ brief });
+    const projectName = inferred.projectName || "Project";
+    const featureName = inferred.featureName || "Core Feature";
+    const description = inferred.description || brief;
 
-    const clarifyingAnswers = Array.isArray(answers)
-      ? answers
-          .map((item: { question: string; answer: string }, index: number) =>
-            `${index + 1}. ${item.question}\nAnswer: ${item.answer || "(no answer)"}`
-          )
-          .join("\n\n")
-      : "";
+    const clarifyingAnswers = buildClarifyingAnswers(
+      brief,
+      Array.isArray(interview) ? interview : [],
+      interviewSummary
+    );
 
     const prdData = await generatePrdData({
       projectName,
       featureName,
       description,
-      branchName: resolvedBranch,
+      branchName: `feature/${featureName.toLowerCase().replace(/\s+/g, "-")}`,
       clarifyingAnswers
     });
+
+    const mergedFeatures = applyFeatureOverrides(prdData.features, featureOverrides);
 
     const prdMarkdown = buildPrdMarkdown({
       featureName,
@@ -51,13 +92,14 @@ export async function POST(request: Request) {
 
     const prdJson = buildPrdJson({
       project: prdData.project || projectName,
-      branchName: prdData.branchName || resolvedBranch,
+      branchName: prdData.branchName || `feature/${featureName.toLowerCase().replace(/\s+/g, "-")}`,
       description: prdData.description || description,
       userStories: prdData.userStories
     });
 
     return Response.json({
       ...prdData,
+      features: mergedFeatures || prdData.features,
       prdMarkdown,
       prdJson
     });

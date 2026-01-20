@@ -185,6 +185,14 @@ textarea {
   border-bottom: 4px solid var(--foreground);
 }
 
+.section.compact {
+  padding: 3rem 0;
+}
+
+.container.narrow {
+  max-width: 48rem;
+}
+
 .section.grid {
   background-image:
     linear-gradient(#00000008 1px, transparent 1px),
@@ -314,6 +322,50 @@ textarea {
   background: var(--card);
 }
 
+.simple-header {
+  margin-bottom: 2rem;
+}
+
+.question-card {
+  border: 2px solid var(--foreground);
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.history-block {
+  border: 2px solid var(--foreground);
+  padding: 2rem;
+  margin-top: 2rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.history-item {
+  border: 1px solid var(--foreground);
+  padding: 1.5rem;
+}
+
+.chat-thread {
+  border: 2px solid var(--foreground);
+  padding: 2rem;
+  margin: 2rem 0;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.chat-message {
+  border: 1px solid var(--foreground);
+  padding: 1.5rem;
+}
+
+.chat-message.assistant {
+  background: var(--muted);
+}
+
+.chat-message.user {
+  background: var(--background);
+}
+
 .chat-box textarea {
   font-size: 1.125rem;
   min-height: 180px;
@@ -337,6 +389,54 @@ textarea {
   stroke: currentColor;
   fill: none;
   stroke-width: 1.5;
+}
+
+.mic-button {
+  width: 68px;
+  height: 68px;
+  padding: 0;
+  border: 2px solid var(--foreground);
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mic-button svg {
+  width: 28px;
+  height: 28px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.5;
+}
+
+.mic-button.small {
+  width: 44px;
+  height: 44px;
+}
+
+.mic-button.small svg {
+  width: 20px;
+  height: 20px;
+}
+
+.edit-control {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.feature-edit textarea {
+  min-height: 120px;
+}
+
+.history-toggle {
+  margin-top: 2rem;
+}
+
+.history-toggle summary {
+  cursor: pointer;
 }
 
 .feature-block {

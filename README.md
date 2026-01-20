@@ -5,7 +5,13 @@ A minimalist monochrome web + CLI tool to interview users and generate PRDs plus
 ## Requirements
 
 - Node 18+
-- `OPENAI_API_KEY` environment variable
+- `OPENAI_API_KEY` environment variable (use `.env` or `.env.local`)
+
+Copy `.env.example` to `.env` and fill in your key:
+
+```bash
+cp .env.example .env
+```
 
 ## CLI Usage
 
