@@ -41,6 +41,12 @@ const INPUT_MODES: Array<{ id: InputMode; label: string }> = [
   { id: "type", label: "Type" }
 ];
 
+const normalizeText = (value: unknown) => {
+  if (typeof value === "string") return value;
+  if (value == null) return "";
+  return String(value);
+};
+
 export default function InterviewClient() {
   const [brief, setBrief] = useState("");
   const [interviewStarted, setInterviewStarted] = useState(false);
@@ -111,7 +117,7 @@ export default function InterviewClient() {
               throw new Error("Transcription failed.");
             }
             const data = await response.json();
-            onText(data.text || "");
+            onText(normalizeText(data.text));
           } catch (err) {
             setError(err instanceof Error ? err.message : "Transcription error.");
           } finally {
@@ -130,8 +136,9 @@ export default function InterviewClient() {
 
   const requestNextQuestion = useCallback(
     async (history: InterviewTurn[], overrideBrief?: string) => {
-      const activeBrief =
-        typeof overrideBrief === "string" ? overrideBrief.trim() : brief.trim();
+      const activeBrief = normalizeText(
+        typeof overrideBrief === "string" ? overrideBrief : brief
+      ).trim();
       if (!activeBrief) {
         setCurrentQuestion(null);
         return;
@@ -161,8 +168,9 @@ export default function InterviewClient() {
 
   const refreshPreview = useCallback(
     async (history: InterviewTurn[], overrideBrief?: string) => {
-      const activeBrief =
-        typeof overrideBrief === "string" ? overrideBrief.trim() : brief.trim();
+      const activeBrief = normalizeText(
+        typeof overrideBrief === "string" ? overrideBrief : brief
+      ).trim();
       if (!activeBrief) {
         return;
       }
@@ -195,7 +203,7 @@ export default function InterviewClient() {
 
   const handleStartInterview = async (overrideBrief?: string) => {
     const resolvedBrief = typeof overrideBrief === "string" ? overrideBrief : brief;
-    const nextBrief = resolvedBrief.trim();
+    const nextBrief = normalizeText(resolvedBrief).trim();
     if (!nextBrief) {
       setError("Add a short brief to begin.");
       return;
@@ -217,7 +225,7 @@ export default function InterviewClient() {
       return;
     }
     const resolvedAnswer = typeof overrideAnswer === "string" ? overrideAnswer : answerDraft;
-    const nextAnswer = resolvedAnswer.trim();
+    const nextAnswer = normalizeText(resolvedAnswer).trim();
     if (!nextAnswer) {
       setError("Add a response before sending.");
       return;
@@ -230,6 +238,22 @@ export default function InterviewClient() {
       refreshPreview(nextHistory),
       requestNextQuestion(nextHistory)
     ]);
+  };
+
+  const handleStopInterview = () => {
+    setInterviewDone(true);
+    setCurrentQuestion(null);
+    setError(null);
+  };
+
+  const handleRestartInterview = async () => {
+    setError(null);
+    setResult(null);
+    setInterviewStarted(false);
+    setInterviewHistory([]);
+    setInterviewSummary(null);
+    setInterviewDone(false);
+    setCurrentQuestion(null);
   };
 
   const updateFeatureField = (index: number, field: "name" | "summary", value: string) => {
@@ -336,7 +360,7 @@ export default function InterviewClient() {
                   onClick={() =>
                     recordingTarget === "brief"
                       ? stopRecording()
-                      : startAudioRecording("brief", (value) => setBrief(value))
+                      : startAudioRecording("brief", (value) => setBrief(normalizeText(value)))
                   }
                   disabled={transcribingTarget === "brief"}
                 >
@@ -401,7 +425,7 @@ export default function InterviewClient() {
                         recordingTarget === "answer"
                           ? stopRecording()
                           : startAudioRecording("answer", (value) => {
-                              setAnswerDraft(value);
+                              setAnswerDraft(normalizeText(value));
                             })
                       }
                       disabled={transcribingTarget === "answer"}
@@ -454,13 +478,23 @@ export default function InterviewClient() {
               </div>
             )}
 
-            {interviewDone && (
-              <div className="button-row">
+            <div className="button-row">
+              {!interviewDone && (
+                <button className="secondary" onClick={handleStopInterview} disabled={loadingInterview}>
+                  Finish Interview
+                </button>
+              )}
+              {interviewDone && (
                 <button className="primary" onClick={handleGenerate} disabled={generating || loadingInterview}>
                   {generating ? "Generating..." : "Generate PRD"}
                 </button>
-              </div>
-            )}
+              )}
+              {interviewStarted && (
+                <button className="secondary" onClick={handleRestartInterview} disabled={loadingInterview}>
+                  Restart Interview
+                </button>
+              )}
+            </div>
           </div>
         </section>
       )}

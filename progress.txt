@@ -6,3 +6,4 @@ Learnings
 - Editing generated features (voice or text) is important for user control.
 - Interview questions must stay focused on building requirements (no marketing/support).
 - Input modes are now limited to record or type to reduce confusion.
+- Users can finish the interview early to generate docs or restart the interview.
