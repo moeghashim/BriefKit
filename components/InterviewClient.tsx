@@ -344,213 +344,200 @@ export default function InterviewClient() {
     <main>
       <div className={`workspace${hasFirstAnswer ? " split" : ""}`}>
         <div className="workspace-left">
-          <section className="section compact brief-section" id="brief">
-            <div className="container narrow">
-              {!interviewStarted ? (
-                <>
-                  <div className="simple-header">
-                    <div className="mono">BriefKit</div>
-                    <h1 className="hero-title">Say what you want to build.</h1>
-                  </div>
-                  <div className="rule-row compact">
-                    <div className="rule" />
-                    <a
-                      className="repo-link mono"
-                      href="https://github.com/moeghashim/BriefKit"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Repo
-                    </a>
-                  </div>
-                  <div className="chat-box">
-                    <div className="mode-toggle" role="group" aria-label="Input mode">
-                      {INPUT_MODES.map((mode) => (
-                        <button
-                          key={mode.id}
-                          type="button"
-                          className={`mode-button${inputMode === mode.id ? " active" : ""}`}
-                          onClick={() => setInputMode(mode.id)}
-                          aria-pressed={inputMode === mode.id}
-                        >
-                          {mode.label}
-                        </button>
-                      ))}
-                    </div>
-                    <textarea
-                      value={brief}
-                      onChange={(e) => setBrief(e.target.value)}
-                      placeholder={
-                        inputMode === "record"
-                          ? "Recording mode: use the mic to capture your brief."
-                          : "Describe the product or feature. Keep it short."
-                      }
-                      readOnly={!allowTyping}
-                    />
-                    <div className="button-row">
-                      {allowRecording && (
-                        <button
-                          className="mic-button"
-                          aria-label={recordingTarget === "brief" ? "Stop recording" : "Record brief"}
-                          onClick={() =>
-                            recordingTarget === "brief"
-                              ? stopRecording()
-                              : startAudioRecording("brief", (value) => setBrief(normalizeText(value)))
-                          }
-                          disabled={transcribingTarget === "brief"}
-                        >
-                          <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
-                            <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
-                            <path d="M12 19.5v2" />
-                            <path d="M8.5 21.5h7" />
-                          </svg>
-                        </button>
-                      )}
-                      {transcribingTarget === "brief" && <span className="mono">Transcribing...</span>}
-                      <button className="primary" onClick={handleStartInterview} disabled={loadingInterview}>
-                        {loadingInterview ? "Starting..." : startButtonLabel}
-                      </button>
-                    </div>
-                  </div>
-                  {error && <p className="muted">{error}</p>}
-                </>
-              ) : (
-                <>
-                  <div className="simple-header">
-                    <div className="mono">Current Question</div>
-                    <h1 className="hero-title question-title">
-                      {currentQuestion || "Preparing the first question..."}
-                    </h1>
-                  </div>
-                  <div className="rule-row compact">
-                    <div className="rule" />
-                    <a
-                      className="repo-link mono"
-                      href="https://github.com/moeghashim/BriefKit"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Repo
-                    </a>
-                  </div>
-                  {error && <p className="muted">{error}</p>}
-                </>
-              )}
-            </div>
-          </section>
-
-          {interviewStarted && (
-            <section className="section compact">
+          <div className="content-scroll-area">
+            <section className="section compact brief-section" id="brief">
               <div className="container narrow">
-                <h2>Interview</h2>
-                {interviewInProgress && (
-                  <div className="chat-box">
-                    <div className="mode-toggle" role="group" aria-label="Input mode">
-                      {INPUT_MODES.map((mode) => (
-                        <button
-                          key={mode.id}
-                          type="button"
-                          className={`mode-button${inputMode === mode.id ? " active" : ""}`}
-                          onClick={() => setInputMode(mode.id)}
-                          aria-pressed={inputMode === mode.id}
-                        >
-                          {mode.label}
-                        </button>
-                      ))}
+                {!interviewStarted ? (
+                  <>
+                    <div className="simple-header">
+                      <div className="mono">BriefKit</div>
+                      <h1 className="hero-title">Say what you want to build.</h1>
                     </div>
-                    <textarea
-                      value={answerDraft}
-                      onChange={(e) => setAnswerDraft(e.target.value)}
-                      placeholder={
-                        inputMode === "record"
-                          ? "Recording mode: use the mic to capture your answer."
-                          : "Answer the current question."
-                      }
-                      readOnly={!allowTyping}
-                    />
-                    <div className="button-row">
-                      {allowRecording && (
-                        <button
-                          className="mic-button"
-                          aria-label={recordingTarget === "answer" ? "Stop recording answer" : "Record answer"}
-                          onClick={() =>
-                            recordingTarget === "answer"
-                              ? stopRecording()
-                              : startAudioRecording("answer", (value) => {
-                                  setAnswerDraft(normalizeText(value));
-                                })
-                          }
-                          disabled={transcribingTarget === "answer"}
-                        >
-                          <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
-                            <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
-                            <path d="M12 19.5v2" />
-                            <path d="M8.5 21.5h7" />
-                          </svg>
-                        </button>
-                      )}
-                      {transcribingTarget === "answer" && <span className="mono">Transcribing...</span>}
-                      <button className="primary" onClick={handleSendAnswer} disabled={loadingInterview}>
-                        {loadingInterview ? "Waiting..." : "Send Answer"}
-                      </button>
+                    <div className="rule-row compact">
+                      <div className="rule" />
+                      <a
+                        className="repo-link mono"
+                        href="https://github.com/moeghashim/BriefKit"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Repo
+                      </a>
                     </div>
-                  </div>
-                )}
-
-                <details className="history-toggle">
-                  <summary className="mono">Show previous answers</summary>
-                  <div className="history-block">
-                    {interviewHistory.map((turn, index) => (
-                      <div key={`${turn.question}-${index}`} className="history-item">
-                        <div className="mono">Q{index + 1}</div>
-                        <p>{turn.question}</p>
-                        <div className="mono">A{index + 1}</div>
-                        <p>{turn.answer}</p>
+                    {error && <p className="muted">{error}</p>}
+                  </>
+                ) : (
+                  <>
+                    <div className="simple-header">
+                      <div className="mono">Current Question</div>
+                      <h1 className="hero-title question-title">
+                        {currentQuestion || "Preparing the first question..."}
+                      </h1>
+                    </div>
+                    <div className="rule-row compact">
+                      <div className="rule" />
+                      <a
+                        className="repo-link mono"
+                        href="https://github.com/moeghashim/BriefKit"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Repo
+                      </a>
+                    </div>
+                    
+                    <details className="history-toggle">
+                      <summary className="mono">Show previous answers</summary>
+                      <div className="history-block">
+                        {interviewHistory.map((turn, index) => (
+                          <div key={`${turn.question}-${index}`} className="history-item">
+                            <div className="mono">Q{index + 1}</div>
+                            <p>{turn.question}</p>
+                            <div className="mono">A{index + 1}</div>
+                            <p>{turn.answer}</p>
+                          </div>
+                        ))}
                       </div>
+                    </details>
+
+                    {interviewSummary && (
+                      <div className="card" style={{ marginTop: "2rem" }}>
+                        <div className="mono">Summary</div>
+                        <ul>
+                          {interviewSummary.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    {error && <p className="muted">{error}</p>}
+                  </>
+                )}
+              </div>
+            </section>
+          </div>
+
+          <div className="fixed-input-area">
+            <div className="container narrow" style={{ padding: "1.5rem" }}>
+              {!interviewDone ? (
+                <div className="chat-box" style={{ border: "none", padding: 0, background: "transparent" }}>
+                  <div className="mode-toggle" role="group" aria-label="Input mode">
+                    {INPUT_MODES.map((mode) => (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        className={`mode-button${inputMode === mode.id ? " active" : ""}`}
+                        onClick={() => setInputMode(mode.id)}
+                        aria-pressed={inputMode === mode.id}
+                      >
+                        {mode.label}
+                      </button>
                     ))}
                   </div>
-                </details>
-
-                {interviewDone && (
-                  <div className="card">
-                    <div className="mono">Interview Complete</div>
-                    <p>Generate the PRD and exports when you are ready.</p>
-                  </div>
-                )}
-
-                {interviewSummary && (
-                  <div className="card">
-                    <div className="mono">Summary</div>
-                    <ul>
-                      {interviewSummary.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                <div className="button-row">
-                  {!interviewDone && (
-                    <button className="secondary" onClick={handleStopInterview} disabled={loadingInterview}>
-                      Finish Interview
-                    </button>
+                  
+                  {!interviewStarted ? (
+                    <>
+                      <textarea
+                        value={brief}
+                        onChange={(e) => setBrief(e.target.value)}
+                        placeholder={
+                          inputMode === "record"
+                            ? "Recording mode: use the mic to capture your brief."
+                            : "Describe the product or feature. Keep it short."
+                        }
+                        readOnly={!allowTyping}
+                      />
+                      <div className="button-row">
+                        {allowRecording && (
+                          <button
+                            className="mic-button"
+                            aria-label={recordingTarget === "brief" ? "Stop recording" : "Record brief"}
+                            onClick={() =>
+                              recordingTarget === "brief"
+                                ? stopRecording()
+                                : startAudioRecording("brief", (value) => setBrief(normalizeText(value)))
+                            }
+                            disabled={transcribingTarget === "brief"}
+                          >
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                              <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
+                              <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
+                              <path d="M12 19.5v2" />
+                              <path d="M8.5 21.5h7" />
+                            </svg>
+                          </button>
+                        )}
+                        {transcribingTarget === "brief" && <span className="mono">Transcribing...</span>}
+                        <button className="primary" onClick={() => handleStartInterview()} disabled={loadingInterview}>
+                          {loadingInterview ? "Starting..." : startButtonLabel}
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <textarea
+                        value={answerDraft}
+                        onChange={(e) => setAnswerDraft(e.target.value)}
+                        placeholder={
+                          inputMode === "record"
+                            ? "Recording mode: use the mic to capture your answer."
+                            : "Answer the current question."
+                        }
+                        readOnly={!allowTyping}
+                      />
+                      <div className="button-row">
+                        {allowRecording && (
+                          <button
+                            className="mic-button"
+                            aria-label={recordingTarget === "answer" ? "Stop recording answer" : "Record answer"}
+                            onClick={() =>
+                              recordingTarget === "answer"
+                                ? stopRecording()
+                                : startAudioRecording("answer", (value) => {
+                                    setAnswerDraft(normalizeText(value));
+                                  })
+                            }
+                            disabled={transcribingTarget === "answer"}
+                          >
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                              <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
+                              <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
+                              <path d="M12 19.5v2" />
+                              <path d="M8.5 21.5h7" />
+                            </svg>
+                          </button>
+                        )}
+                        {transcribingTarget === "answer" && <span className="mono">Transcribing...</span>}
+                        <button className="primary" onClick={() => handleSendAnswer()} disabled={loadingInterview}>
+                          {loadingInterview ? "Waiting..." : "Send Answer"}
+                        </button>
+                        <button className="secondary" onClick={handleStopInterview} disabled={loadingInterview}>
+                          Finish Interview
+                        </button>
+                        <button className="ghost" onClick={handleRestartInterview} disabled={loadingInterview}>
+                          Restart
+                        </button>
+                      </div>
+                    </>
                   )}
-                  {interviewDone && (
-                    <button className="primary" onClick={handleGenerate} disabled={generating || loadingInterview}>
+                </div>
+              ) : (
+                <div className="card">
+                  <div className="mono">Interview Complete</div>
+                  <p>Generate the PRD and exports when you are ready.</p>
+                  <div className="button-row">
+                     <button className="primary" onClick={handleGenerate} disabled={generating || loadingInterview}>
                       {generating ? "Generating..." : "Generate PRD"}
                     </button>
-                  )}
-                  {interviewStarted && (
                     <button className="secondary" onClick={handleRestartInterview} disabled={loadingInterview}>
                       Restart Interview
                     </button>
-                  )}
+                  </div>
                 </div>
-              </div>
-            </section>
-          )}
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="workspace-right">

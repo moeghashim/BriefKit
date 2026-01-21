@@ -66,7 +66,15 @@ main {
   align-items: start;
 }
 
-.workspace-left,
+.workspace-left {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-right: 2px solid var(--foreground);
+  transition: transform 300ms ease, opacity 300ms ease;
+  overflow: hidden;
+}
+
 .workspace-right {
   display: grid;
   gap: 1.5rem;
@@ -76,9 +84,23 @@ main {
   transition: transform 300ms ease, opacity 300ms ease;
 }
 
+.content-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.fixed-input-area {
+  flex: 0 0 auto;
+  z-index: 10;
+  background: var(--background);
+  border-top: 2px solid var(--foreground);
+}
+
 .workspace:not(.split) .workspace-right {
   opacity: 0;
-  transform: translateY(20px);
+  transform: translateX(20px);
   pointer-events: none;
   max-height: 0;
   overflow: hidden;
@@ -93,11 +115,11 @@ main {
 
 .workspace.split .workspace-left {
   border-right: 2px solid var(--foreground);
-  padding-right: 2rem;
+  padding-right: 0;
 }
 
 .workspace.split .workspace-right {
-  padding-left: 2rem;
+  padding-left: 0;
 }
 
 .workspace .container {
@@ -239,12 +261,12 @@ textarea {
 }
 
 .section {
-  padding: 6rem 0;
+  padding: 4rem 0;
   border-bottom: 4px solid var(--foreground);
 }
 
 .section.compact {
-  padding: 3rem 0;
+  padding: 2rem 0;
 }
 
 .container.narrow {
@@ -402,7 +424,16 @@ textarea {
 }
 
 .brief-section {
-  padding: 1.75rem 0;
+  padding: 2rem 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.brief-section .container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .brief-section .simple-header {
@@ -415,6 +446,7 @@ textarea {
 
 .brief-section .chat-box {
   padding: 1.5rem;
+  margin-top: auto;
 }
 
 .question-title {
