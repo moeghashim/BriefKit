@@ -386,19 +386,21 @@ export default function InterviewClient() {
                       </a>
                     </div>
                     
-                    <details className="history-toggle">
-                      <summary className="mono">Show previous answers</summary>
-                      <div className="history-block">
-                        {interviewHistory.map((turn, index) => (
-                          <div key={`${turn.question}-${index}`} className="history-item">
-                            <div className="mono">Q{index + 1}</div>
-                            <p>{turn.question}</p>
-                            <div className="mono">A{index + 1}</div>
-                            <p>{turn.answer}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </details>
+                    {interviewHistory.length > 0 && (
+                      <details className="history-toggle">
+                        <summary className="mono">Show previous answers</summary>
+                        <div className="history-block">
+                          {interviewHistory.map((turn, index) => (
+                            <div key={`${turn.question}-${index}`} className="history-item">
+                              <div className="mono">Q{index + 1}</div>
+                              <p>{turn.question}</p>
+                              <div className="mono">A{index + 1}</div>
+                              <p>{turn.answer}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    )}
 
                     {interviewSummary && (
                       <div className="card" style={{ marginTop: "2rem" }}>
