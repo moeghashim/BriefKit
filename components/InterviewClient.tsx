@@ -402,7 +402,7 @@ export default function InterviewClient() {
                       </details>
                     )}
 
-                    {interviewSummary && (
+                    {interviewSummary && interviewSummary.length > 0 && (
                       <div className="card" style={{ marginTop: "2rem" }}>
                         <div className="mono">Summary</div>
                         <ul>
