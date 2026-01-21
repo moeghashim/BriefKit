@@ -7,3 +7,4 @@ Learnings
 - Interview questions must stay focused on building requirements (no marketing/support).
 - Input modes are now limited to record or type to reduce confusion.
 - Users can finish the interview early to generate docs or restart the interview.
+- The workspace now splits after the first answer, with loading feedback for preview updates.

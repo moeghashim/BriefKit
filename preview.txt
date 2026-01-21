@@ -1,0 +1,4 @@
+Preview
+- Split the workspace into a 1/3 interview pane and a 2/3 feature view.
+- Added a "Finalizing table" loading indicator for preview updates.
+- Lowered the rule line and added a repo link in the brief header.
