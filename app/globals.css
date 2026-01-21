@@ -55,7 +55,7 @@ main {
 .workspace {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 2rem;
+  gap: 0;
   height: 100vh;
   padding: 1.5rem 0;
   transition: grid-template-columns 300ms ease;
@@ -84,15 +84,20 @@ main {
   overflow: hidden;
 }
 
-.workspace.split .workspace-left {
-  transform: translateX(-2%);
-}
-
 .workspace.split .workspace-right {
   opacity: 1;
   transform: translateX(0);
   max-height: 100%;
   overflow: auto;
+}
+
+.workspace.split .workspace-left {
+  border-right: 2px solid var(--foreground);
+  padding-right: 2rem;
+}
+
+.workspace.split .workspace-right {
+  padding-left: 2rem;
 }
 
 .workspace .container {
@@ -101,7 +106,7 @@ main {
 }
 
 .workspace .section {
-  padding: 2rem 0;
+  padding: 1.5rem 0;
   border-bottom: 2px solid var(--foreground);
 }
 
@@ -382,6 +387,10 @@ textarea {
   margin-top: 1.5rem;
 }
 
+.button-row button {
+  min-height: 44px;
+}
+
 .chat-box {
   border: 2px solid var(--foreground);
   padding: 2.5rem;
@@ -393,7 +402,7 @@ textarea {
 }
 
 .brief-section {
-  padding: 2.25rem 0;
+  padding: 1.75rem 0;
 }
 
 .brief-section .simple-header {
@@ -401,11 +410,15 @@ textarea {
 }
 
 .brief-section .hero-title {
-  font-size: clamp(2.25rem, 5vw, 3.25rem);
+  font-size: clamp(2rem, 4vw, 2.8rem);
 }
 
 .brief-section .chat-box {
-  padding: 1.75rem;
+  padding: 1.5rem;
+}
+
+.question-title {
+  font-size: clamp(1.6rem, 3.2vw, 2.4rem);
 }
 
 .question-card {
@@ -422,9 +435,10 @@ textarea {
 }
 
 .mode-button {
-  padding: 0.55rem 1.5rem;
-  font-size: 0.7rem;
-  letter-spacing: 0.18em;
+  padding: 0.75rem 2rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  min-height: 44px;
 }
 
 .mode-button.active {

@@ -8,3 +8,8 @@ Learnings
 - Input modes are now limited to record or type to reduce confusion.
 - Users can finish the interview early to generate docs or restart the interview.
 - The workspace now splits after the first answer, with loading feedback for preview updates.
+
+Preview
+- Split the workspace into a 1/3 interview pane and a 2/3 feature view.
+- Added a "Finalizing table" loading indicator for preview updates.
+- Lowered the rule line and added a repo link in the brief header.
