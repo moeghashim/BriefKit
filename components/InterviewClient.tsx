@@ -34,6 +34,13 @@ type FeatureResult = {
   prdJson: Record<string, unknown>;
 };
 
+type InputMode = "record" | "type";
+
+const INPUT_MODES: Array<{ id: InputMode; label: string }> = [
+  { id: "record", label: "Record" },
+  { id: "type", label: "Type" }
+];
+
 export default function InterviewClient() {
   const [brief, setBrief] = useState("");
   const [interviewStarted, setInterviewStarted] = useState(false);
@@ -53,6 +60,7 @@ export default function InterviewClient() {
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState<FeatureResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [inputMode, setInputMode] = useState<InputMode>("record");
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -121,13 +129,19 @@ export default function InterviewClient() {
   );
 
   const requestNextQuestion = useCallback(
-    async (history: InterviewTurn[]) => {
+    async (history: InterviewTurn[], overrideBrief?: string) => {
+      const activeBrief =
+        typeof overrideBrief === "string" ? overrideBrief.trim() : brief.trim();
+      if (!activeBrief) {
+        setCurrentQuestion(null);
+        return;
+      }
       setLoadingInterview(true);
       try {
         const response = await fetch("/api/interview", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ brief, history })
+          body: JSON.stringify({ brief: activeBrief, history })
         });
         if (!response.ok) {
           throw new Error("Interview request failed.");
@@ -146,13 +160,18 @@ export default function InterviewClient() {
   );
 
   const refreshPreview = useCallback(
-    async (history: InterviewTurn[]) => {
+    async (history: InterviewTurn[], overrideBrief?: string) => {
+      const activeBrief =
+        typeof overrideBrief === "string" ? overrideBrief.trim() : brief.trim();
+      if (!activeBrief) {
+        return;
+      }
       setLoadingPreview(true);
       try {
         const response = await fetch("/api/preview", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ brief, interview: history })
+          body: JSON.stringify({ brief: activeBrief, interview: history })
         });
         if (!response.ok) {
           throw new Error("Preview failed.");
@@ -174,10 +193,15 @@ export default function InterviewClient() {
     [brief, hasFeatureEdits]
   );
 
-  const handleStartInterview = async () => {
-    if (!brief.trim()) {
+  const handleStartInterview = async (overrideBrief?: string) => {
+    const resolvedBrief = typeof overrideBrief === "string" ? overrideBrief : brief;
+    const nextBrief = resolvedBrief.trim();
+    if (!nextBrief) {
       setError("Add a short brief to begin.");
       return;
+    }
+    if (overrideBrief && overrideBrief !== brief) {
+      setBrief(overrideBrief);
     }
     setError(null);
     setResult(null);
@@ -185,22 +209,27 @@ export default function InterviewClient() {
     setInterviewHistory([]);
     setInterviewSummary(null);
     setInterviewDone(false);
-    await requestNextQuestion([]);
+    await requestNextQuestion([], nextBrief);
   };
 
-  const handleSendAnswer = async () => {
+  const handleSendAnswer = async (overrideAnswer?: string) => {
     if (!currentQuestion) {
       return;
     }
-    if (!answerDraft.trim()) {
+    const resolvedAnswer = typeof overrideAnswer === "string" ? overrideAnswer : answerDraft;
+    const nextAnswer = resolvedAnswer.trim();
+    if (!nextAnswer) {
       setError("Add a response before sending.");
       return;
     }
     setError(null);
-    const nextHistory = [...interviewHistory, { question: currentQuestion, answer: answerDraft }];
+    const nextHistory = [...interviewHistory, { question: currentQuestion, answer: nextAnswer }];
     setInterviewHistory(nextHistory);
     setAnswerDraft("");
-    await Promise.all([refreshPreview(nextHistory), requestNextQuestion(nextHistory)]);
+    await Promise.all([
+      refreshPreview(nextHistory),
+      requestNextQuestion(nextHistory)
+    ]);
   };
 
   const updateFeatureField = (index: number, field: "name" | "summary", value: string) => {
@@ -261,6 +290,11 @@ export default function InterviewClient() {
     },
     {}
   );
+  const interviewInProgress = interviewStarted && !interviewDone;
+  const startButtonLabel = interviewStarted ? "Restart Interview" : "Start Interview";
+  const allowRecording = inputMode === "record";
+  const allowTyping = inputMode === "type";
+  const showTextarea = true;
 
   return (
     <main>
@@ -271,30 +305,52 @@ export default function InterviewClient() {
             <h1 className="hero-title">Say what you want to build.</h1>
           </div>
           <div className="chat-box">
+            <div className="mode-toggle" role="group" aria-label="Input mode">
+              {INPUT_MODES.map((mode) => (
+                <button
+                  key={mode.id}
+                  type="button"
+                  className={`mode-button${inputMode === mode.id ? " active" : ""}`}
+                  onClick={() => setInputMode(mode.id)}
+                  aria-pressed={inputMode === mode.id}
+                >
+                  {mode.label}
+                </button>
+              ))}
+            </div>
             <textarea
               value={brief}
               onChange={(e) => setBrief(e.target.value)}
-              placeholder="Describe the product or feature. Keep it short."
+              placeholder={
+                inputMode === "record"
+                  ? "Recording mode: use the mic to capture your brief."
+                  : "Describe the product or feature. Keep it short."
+              }
+              readOnly={!allowTyping}
             />
             <div className="button-row">
-              <button
-                className="mic-button"
-                aria-label={recordingTarget === "brief" ? "Stop recording" : "Record brief"}
-                onClick={() =>
-                  recordingTarget === "brief" ? stopRecording() : startAudioRecording("brief", setBrief)
-                }
-                disabled={transcribingTarget === "brief"}
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
-                  <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
-                  <path d="M12 19.5v2" />
-                  <path d="M8.5 21.5h7" />
-                </svg>
-              </button>
+              {allowRecording && (
+                <button
+                  className="mic-button"
+                  aria-label={recordingTarget === "brief" ? "Stop recording" : "Record brief"}
+                  onClick={() =>
+                    recordingTarget === "brief"
+                      ? stopRecording()
+                      : startAudioRecording("brief", (value) => setBrief(value))
+                  }
+                  disabled={transcribingTarget === "brief"}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
+                    <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
+                    <path d="M12 19.5v2" />
+                    <path d="M8.5 21.5h7" />
+                  </svg>
+                </button>
+              )}
               {transcribingTarget === "brief" && <span className="mono">Transcribing...</span>}
               <button className="primary" onClick={handleStartInterview} disabled={loadingInterview}>
-                {loadingInterview ? "Starting..." : "Start Interview"}
+                {loadingInterview ? "Starting..." : startButtonLabel}
               </button>
             </div>
           </div>
@@ -311,36 +367,60 @@ export default function InterviewClient() {
               <p>{currentQuestion || "Preparing the first question..."}</p>
             </div>
 
-            <div className="chat-box">
-              <textarea
-                value={answerDraft}
-                onChange={(e) => setAnswerDraft(e.target.value)}
-                placeholder="Answer the current question."
-              />
-              <div className="button-row">
-                <button
-                  className="mic-button"
-                  aria-label={recordingTarget === "answer" ? "Stop recording answer" : "Record answer"}
-                  onClick={() =>
-                    recordingTarget === "answer"
-                      ? stopRecording()
-                      : startAudioRecording("answer", setAnswerDraft)
+            {interviewInProgress && (
+              <div className="chat-box">
+                <div className="mode-toggle" role="group" aria-label="Input mode">
+                  {INPUT_MODES.map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      className={`mode-button${inputMode === mode.id ? " active" : ""}`}
+                      onClick={() => setInputMode(mode.id)}
+                      aria-pressed={inputMode === mode.id}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  value={answerDraft}
+                  onChange={(e) => setAnswerDraft(e.target.value)}
+                  placeholder={
+                    inputMode === "record"
+                      ? "Recording mode: use the mic to capture your answer."
+                      : "Answer the current question."
                   }
-                  disabled={transcribingTarget === "answer"}
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
-                    <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
-                    <path d="M12 19.5v2" />
-                    <path d="M8.5 21.5h7" />
-                  </svg>
-                </button>
-                {transcribingTarget === "answer" && <span className="mono">Transcribing...</span>}
-                <button className="primary" onClick={handleSendAnswer} disabled={loadingInterview}>
-                  {loadingInterview ? "Waiting..." : "Send Answer"}
-                </button>
+                  readOnly={!allowTyping}
+                />
+                <div className="button-row">
+                  {allowRecording && (
+                    <button
+                      className="mic-button"
+                      aria-label={recordingTarget === "answer" ? "Stop recording answer" : "Record answer"}
+                      onClick={() =>
+                        recordingTarget === "answer"
+                          ? stopRecording()
+                          : startAudioRecording("answer", (value) => {
+                              setAnswerDraft(value);
+                            })
+                      }
+                      disabled={transcribingTarget === "answer"}
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
+                        <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
+                        <path d="M12 19.5v2" />
+                        <path d="M8.5 21.5h7" />
+                      </svg>
+                    </button>
+                  )}
+                  {transcribingTarget === "answer" && <span className="mono">Transcribing...</span>}
+                  <button className="primary" onClick={handleSendAnswer} disabled={loadingInterview}>
+                    {loadingInterview ? "Waiting..." : "Send Answer"}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             <details className="history-toggle">
               <summary className="mono">Show previous answers</summary>
@@ -374,15 +454,13 @@ export default function InterviewClient() {
               </div>
             )}
 
-            <div className="button-row">
-              <button
-                className="primary"
-                onClick={handleGenerate}
-                disabled={!interviewDone || generating || loadingInterview}
-              >
-                {generating ? "Generating..." : "Generate PRD"}
-              </button>
-            </div>
+            {interviewDone && (
+              <div className="button-row">
+                <button className="primary" onClick={handleGenerate} disabled={generating || loadingInterview}>
+                  {generating ? "Generating..." : "Generate PRD"}
+                </button>
+              </div>
+            )}
           </div>
         </section>
       )}

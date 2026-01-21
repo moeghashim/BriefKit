@@ -1,0 +1,8 @@
+Learnings
+- Users want a minimal entry point: one brief input with a mic and optional typing, then a guided interview.
+- Interview questions must be tailored to the idea and exclude budget/timeline topics.
+- Interactive, one-question-at-a-time flow reduces confusion versus static forms.
+- Live feature/story previews help users validate direction before export.
+- Editing generated features (voice or text) is important for user control.
+- Interview questions must stay focused on building requirements (no marketing/support).
+- Input modes are now limited to record or type to reduce confusion.

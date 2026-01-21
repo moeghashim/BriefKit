@@ -332,6 +332,25 @@ textarea {
   margin-bottom: 2rem;
 }
 
+.mode-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.mode-button {
+  padding: 0.55rem 1.5rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+}
+
+.mode-button.active {
+  background: var(--foreground);
+  color: var(--background);
+  border: none;
+}
+
 .history-block {
   border: 2px solid var(--foreground);
   padding: 2rem;
