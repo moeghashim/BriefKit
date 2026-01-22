@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type InterviewTurn = {
   question: string;
@@ -9,6 +9,7 @@ type InterviewTurn = {
 
 type FeatureResult = {
   project: string;
+  featureName: string;
   branchName: string;
   description: string;
   introduction: string;
@@ -42,6 +43,11 @@ const INPUT_MODES: Array<{ id: InputMode; label: string }> = [
 ];
 
 const normalizeText = (value: unknown) => (typeof value === "string" ? value : "");
+const kebabCase = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
 
 const extractTranscript = (payload: unknown) => {
   if (typeof payload === "string") return payload;
@@ -78,6 +84,10 @@ export default function InterviewClient() {
   const [previewStories, setPreviewStories] = useState<FeatureResult["userStories"]>([]);
   const [editableFeatures, setEditableFeatures] = useState<FeatureResult["features"]>([]);
   const [hasFeatureEdits, setHasFeatureEdits] = useState(false);
+  const [featureMessageDrafts, setFeatureMessageDrafts] = useState<Record<number, string>>({});
+  const [featureMessages, setFeatureMessages] = useState<Record<number, string[]>>({});
+  const [storyMessageDrafts, setStoryMessageDrafts] = useState<Record<string, string>>({});
+  const [storyMessages, setStoryMessages] = useState<Record<string, string[]>>({});
   const [interviewDone, setInterviewDone] = useState(false);
   const [loadingInterview, setLoadingInterview] = useState(false);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -91,6 +101,16 @@ export default function InterviewClient() {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+
+  const storyLookup = useMemo(() => {
+    return previewStories.reduce<Record<string, FeatureResult["userStories"][0]>>(
+      (acc, story) => {
+        acc[story.id] = story;
+        return acc;
+      },
+      {}
+    );
+  }, [previewStories]);
 
   useEffect(() => {
     if (interviewDone && !hasFeatureEdits && previewFeatures.length > 0) {
@@ -154,6 +174,52 @@ export default function InterviewClient() {
     [recordingTarget, stopRecording]
   );
 
+  const buildFeedback = useCallback(
+    (
+      featureMessagesArg: Record<number, string[]> = featureMessages,
+      storyMessagesArg: Record<string, string[]> = storyMessages
+    ) => {
+      const feedback: string[] = [];
+      const featureSource =
+        interviewDone && editableFeatures.length > 0 ? editableFeatures : previewFeatures;
+
+      Object.entries(featureMessagesArg).forEach(([index, messages]) => {
+        if (!Array.isArray(messages) || messages.length === 0) return;
+        const idx = Number(index);
+        const feature = featureSource[idx];
+        const label = feature?.name ? `Feature "${feature.name}"` : `Feature ${idx + 1}`;
+        messages.forEach((message) => {
+          const trimmed = normalizeText(message).trim();
+          if (trimmed) {
+            feedback.push(`${label}: ${trimmed}`);
+          }
+        });
+      });
+
+      Object.entries(storyMessagesArg).forEach(([storyId, messages]) => {
+        if (!Array.isArray(messages) || messages.length === 0) return;
+        const story = storyLookup[storyId];
+        const label = story ? `Story ${story.id}: ${story.title}` : `Story ${storyId}`;
+        messages.forEach((message) => {
+          const trimmed = normalizeText(message).trim();
+          if (trimmed) {
+            feedback.push(`${label}: ${trimmed}`);
+          }
+        });
+      });
+
+      return feedback;
+    },
+    [
+      editableFeatures,
+      featureMessages,
+      interviewDone,
+      previewFeatures,
+      storyLookup,
+      storyMessages
+    ]
+  );
+
   const requestNextQuestion = useCallback(
     async (history: InterviewTurn[], overrideBrief?: string) => {
       const activeBrief = normalizeText(
@@ -187,19 +253,20 @@ export default function InterviewClient() {
   );
 
   const refreshPreview = useCallback(
-    async (history: InterviewTurn[], overrideBrief?: string) => {
+    async (history: InterviewTurn[], overrideBrief?: string, feedbackOverride?: string[]) => {
       const activeBrief = normalizeText(
         typeof overrideBrief === "string" ? overrideBrief : brief
       ).trim();
       if (!activeBrief) {
         return;
       }
+      const feedback = Array.isArray(feedbackOverride) ? feedbackOverride : buildFeedback();
       setLoadingPreview(true);
       try {
         const response = await fetch("/api/preview", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ brief: activeBrief, interview: history })
+          body: JSON.stringify({ brief: activeBrief, interview: history, feedback })
         });
         if (!response.ok) {
           throw new Error("Preview failed.");
@@ -218,7 +285,7 @@ export default function InterviewClient() {
         setLoadingPreview(false);
       }
     },
-    [brief, hasFeatureEdits]
+    [brief, buildFeedback, hasFeatureEdits]
   );
 
   const handleStartInterview = async (overrideBrief?: string) => {
@@ -237,6 +304,10 @@ export default function InterviewClient() {
     setInterviewHistory([]);
     setInterviewSummary(null);
     setInterviewDone(false);
+    setFeatureMessageDrafts({});
+    setFeatureMessages({});
+    setStoryMessageDrafts({});
+    setStoryMessages({});
     await requestNextQuestion([], nextBrief);
   };
 
@@ -274,6 +345,10 @@ export default function InterviewClient() {
     setInterviewSummary(null);
     setInterviewDone(false);
     setCurrentQuestion(null);
+    setFeatureMessageDrafts({});
+    setFeatureMessages({});
+    setStoryMessageDrafts({});
+    setStoryMessages({});
   };
 
   const updateFeatureField = (index: number, field: "name" | "summary", value: string) => {
@@ -286,16 +361,46 @@ export default function InterviewClient() {
     setHasFeatureEdits(true);
   };
 
+  const sendFeatureMessage = async (index: number) => {
+    const nextMessage = normalizeText(featureMessageDrafts[index]).trim();
+    if (!nextMessage) {
+      return;
+    }
+    const nextFeatureMessages = {
+      ...featureMessages,
+      [index]: [...(featureMessages[index] || []), nextMessage]
+    };
+    setFeatureMessages(nextFeatureMessages);
+    setFeatureMessageDrafts((prev) => ({ ...prev, [index]: "" }));
+    await refreshPreview(interviewHistory, undefined, buildFeedback(nextFeatureMessages, storyMessages));
+  };
+
+  const sendStoryMessage = async (storyId: string) => {
+    const nextMessage = normalizeText(storyMessageDrafts[storyId]).trim();
+    if (!nextMessage) {
+      return;
+    }
+    const nextStoryMessages = {
+      ...storyMessages,
+      [storyId]: [...(storyMessages[storyId] || []), nextMessage]
+    };
+    setStoryMessages(nextStoryMessages);
+    setStoryMessageDrafts((prev) => ({ ...prev, [storyId]: "" }));
+    await refreshPreview(interviewHistory, undefined, buildFeedback(featureMessages, nextStoryMessages));
+  };
+
   const handleGenerate = async () => {
     setGenerating(true);
     setError(null);
     setResult(null);
     try {
+      const feedback = buildFeedback();
       const payload = {
         brief,
         interview: interviewHistory,
         interviewSummary,
-        featureOverrides: hasFeatureEdits ? editableFeatures : undefined
+        featureOverrides: hasFeatureEdits ? editableFeatures : undefined,
+        feedback: feedback.length > 0 ? feedback : undefined
       };
       const response = await fetch("/api/generate", {
         method: "POST",
@@ -327,13 +432,6 @@ export default function InterviewClient() {
   };
 
   const displayFeatures = interviewDone && editableFeatures.length > 0 ? editableFeatures : previewFeatures;
-  const storyLookup = previewStories.reduce<Record<string, FeatureResult["userStories"][0]>>(
-    (acc, story) => {
-      acc[story.id] = story;
-      return acc;
-    },
-    {}
-  );
   const interviewInProgress = interviewStarted && !interviewDone;
   const hasFirstAnswer = interviewHistory.length > 0;
   const startButtonLabel = interviewStarted ? "Restart Interview" : "Start Interview";
@@ -451,25 +549,23 @@ export default function InterviewClient() {
                         readOnly={!allowTyping}
                       />
                       <div className="button-row">
-                        {allowRecording && (
-                          <button
-                            className="mic-button"
-                            aria-label={recordingTarget === "brief" ? "Stop recording" : "Record brief"}
-                            onClick={() =>
-                              recordingTarget === "brief"
-                                ? stopRecording()
-                                : startAudioRecording("brief", (value) => setBrief(normalizeText(value)))
-                            }
-                            disabled={transcribingTarget === "brief"}
-                          >
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                              <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
-                              <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
-                              <path d="M12 19.5v2" />
-                              <path d="M8.5 21.5h7" />
-                            </svg>
-                          </button>
-                        )}
+                        <button
+                          className={`mic-button${allowRecording ? "" : " disabled"}`}
+                          aria-label={recordingTarget === "brief" ? "Stop recording" : "Record brief"}
+                          onClick={() =>
+                            recordingTarget === "brief"
+                              ? stopRecording()
+                              : startAudioRecording("brief", (value) => setBrief(normalizeText(value)))
+                          }
+                          disabled={!allowRecording || transcribingTarget === "brief"}
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
+                            <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
+                            <path d="M12 19.5v2" />
+                            <path d="M8.5 21.5h7" />
+                          </svg>
+                        </button>
                         {transcribingTarget === "brief" && <span className="mono">Transcribing...</span>}
                         <button className="primary" onClick={() => handleStartInterview()} disabled={loadingInterview}>
                           {loadingInterview ? "Starting..." : startButtonLabel}
@@ -489,27 +585,25 @@ export default function InterviewClient() {
                         readOnly={!allowTyping}
                       />
                       <div className="button-row">
-                        {allowRecording && (
-                          <button
-                            className="mic-button"
-                            aria-label={recordingTarget === "answer" ? "Stop recording answer" : "Record answer"}
-                            onClick={() =>
-                              recordingTarget === "answer"
-                                ? stopRecording()
-                                : startAudioRecording("answer", (value) => {
-                                    setAnswerDraft(normalizeText(value));
-                                  })
-                            }
-                            disabled={transcribingTarget === "answer"}
-                          >
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                              <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
-                              <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
-                              <path d="M12 19.5v2" />
-                              <path d="M8.5 21.5h7" />
-                            </svg>
-                          </button>
-                        )}
+                        <button
+                          className={`mic-button${allowRecording ? "" : " disabled"}`}
+                          aria-label={recordingTarget === "answer" ? "Stop recording answer" : "Record answer"}
+                          onClick={() =>
+                            recordingTarget === "answer"
+                              ? stopRecording()
+                              : startAudioRecording("answer", (value) => {
+                                  setAnswerDraft(normalizeText(value));
+                                })
+                          }
+                          disabled={!allowRecording || transcribingTarget === "answer"}
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
+                            <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
+                            <path d="M12 19.5v2" />
+                            <path d="M8.5 21.5h7" />
+                          </svg>
+                        </button>
                         {transcribingTarget === "answer" && <span className="mono">Transcribing...</span>}
                         <button className="primary" onClick={() => handleSendAnswer()} disabled={loadingInterview}>
                           {loadingInterview ? "Waiting..." : "Send Answer"}
@@ -570,9 +664,10 @@ export default function InterviewClient() {
                           <input
                             value={feature.name}
                             onChange={(e) => updateFeatureField(index, "name", e.target.value)}
+                            readOnly={!allowTyping}
                           />
                           <button
-                            className="mic-button small"
+                            className={`mic-button small${allowRecording ? "" : " disabled"}`}
                             aria-label="Record feature name"
                             onClick={() =>
                               recordingTarget === `feature-name-${index}`
@@ -581,7 +676,7 @@ export default function InterviewClient() {
                                     updateFeatureField(index, "name", value)
                                   )
                             }
-                            disabled={transcribingTarget === `feature-name-${index}`}
+                            disabled={!allowRecording || transcribingTarget === `feature-name-${index}`}
                           >
                             <svg viewBox="0 0 24 24" aria-hidden="true">
                               <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
@@ -596,9 +691,10 @@ export default function InterviewClient() {
                           <textarea
                             value={feature.summary}
                             onChange={(e) => updateFeatureField(index, "summary", e.target.value)}
+                            readOnly={!allowTyping}
                           />
                           <button
-                            className="mic-button small"
+                            className={`mic-button small${allowRecording ? "" : " disabled"}`}
                             aria-label="Record feature summary"
                             onClick={() =>
                               recordingTarget === `feature-summary-${index}`
@@ -607,7 +703,7 @@ export default function InterviewClient() {
                                     updateFeatureField(index, "summary", value)
                                   )
                             }
-                            disabled={transcribingTarget === `feature-summary-${index}`}
+                            disabled={!allowRecording || transcribingTarget === `feature-summary-${index}`}
                           >
                             <svg viewBox="0 0 24 24" aria-hidden="true">
                               <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
@@ -624,6 +720,67 @@ export default function InterviewClient() {
                         <p className="feature-summary">{feature.summary}</p>
                       </>
                     )}
+                    <div className="message-panel">
+                      <div className="mono">Message about this feature</div>
+                      <div className="edit-control">
+                        <textarea
+                          value={featureMessageDrafts[index] || ""}
+                          onChange={(e) =>
+                            setFeatureMessageDrafts((prev) => ({
+                              ...prev,
+                              [index]: e.target.value
+                            }))
+                          }
+                          placeholder={
+                            inputMode === "record"
+                              ? "Recording mode: use the mic to capture a feature note."
+                              : "Type a note about this feature."
+                          }
+                          readOnly={!allowTyping}
+                        />
+                        <button
+                          className={`mic-button small${allowRecording ? "" : " disabled"}`}
+                          aria-label="Record feature message"
+                          onClick={() =>
+                            recordingTarget === `feature-message-${index}`
+                              ? stopRecording()
+                              : startAudioRecording(`feature-message-${index}`, (value) =>
+                                  setFeatureMessageDrafts((prev) => ({
+                                    ...prev,
+                                    [index]: normalizeText(value)
+                                  }))
+                                )
+                          }
+                          disabled={!allowRecording || transcribingTarget === `feature-message-${index}`}
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
+                            <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
+                            <path d="M12 19.5v2" />
+                            <path d="M8.5 21.5h7" />
+                          </svg>
+                        </button>
+                      </div>
+                      <div className="message-actions">
+                        <button
+                          className="secondary"
+                          onClick={() => sendFeatureMessage(index)}
+                          disabled={loadingPreview}
+                        >
+                          Send Message
+                        </button>
+                        {transcribingTarget === `feature-message-${index}` && (
+                          <span className="mono">Transcribing...</span>
+                        )}
+                      </div>
+                      {featureMessages[index] && featureMessages[index].length > 0 && (
+                        <ul className="message-list">
+                          {featureMessages[index].map((message, messageIndex) => (
+                            <li key={`${index}-feature-message-${messageIndex}`}>{message}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
                     <table className="feature-table">
                       <thead>
                         <tr>
@@ -637,19 +794,88 @@ export default function InterviewClient() {
                           const story = storyLookup?.[storyId];
                           if (!story) return null;
                           return (
-                            <tr key={story.id}>
-                              <td>
-                                {story.id}: {story.title}
-                              </td>
-                              <td>{story.description}</td>
-                              <td>
-                                <ul>
-                                  {story.acceptanceCriteria.map((item) => (
-                                    <li key={item}>{item}</li>
-                                  ))}
-                                </ul>
-                              </td>
-                            </tr>
+                            <Fragment key={story.id}>
+                              <tr>
+                                <td>
+                                  {story.id}: {story.title}
+                                </td>
+                                <td>{story.description}</td>
+                                <td>
+                                  <ul>
+                                    {story.acceptanceCriteria.map((item) => (
+                                      <li key={item}>{item}</li>
+                                    ))}
+                                  </ul>
+                                </td>
+                              </tr>
+                              <tr className="story-message-row">
+                                <td colSpan={3}>
+                                  <div className="message-panel story-message">
+                                    <div className="mono">Message about {story.id}</div>
+                                    <div className="edit-control">
+                                      <textarea
+                                        value={storyMessageDrafts[story.id] || ""}
+                                        onChange={(e) =>
+                                          setStoryMessageDrafts((prev) => ({
+                                            ...prev,
+                                            [story.id]: e.target.value
+                                          }))
+                                        }
+                                        placeholder={
+                                          inputMode === "record"
+                                            ? "Recording mode: use the mic to capture a story note."
+                                            : "Type a note about this story."
+                                        }
+                                        readOnly={!allowTyping}
+                                      />
+                                      <button
+                                        className={`mic-button small${allowRecording ? "" : " disabled"}`}
+                                        aria-label={`Record message for ${story.id}`}
+                                        onClick={() =>
+                                          recordingTarget === `story-message-${story.id}`
+                                            ? stopRecording()
+                                            : startAudioRecording(`story-message-${story.id}`, (value) =>
+                                                setStoryMessageDrafts((prev) => ({
+                                                  ...prev,
+                                                  [story.id]: normalizeText(value)
+                                                }))
+                                              )
+                                        }
+                                        disabled={!allowRecording || transcribingTarget === `story-message-${story.id}`}
+                                      >
+                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                          <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
+                                          <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
+                                          <path d="M12 19.5v2" />
+                                          <path d="M8.5 21.5h7" />
+                                        </svg>
+                                      </button>
+                                    </div>
+                                    <div className="message-actions">
+                                      <button
+                                        className="secondary"
+                                        onClick={() => sendStoryMessage(story.id)}
+                                        disabled={loadingPreview}
+                                      >
+                                        Send Message
+                                      </button>
+                                      {transcribingTarget === `story-message-${story.id}` && (
+                                        <span className="mono">Transcribing...</span>
+                                      )}
+                                    </div>
+                                    {storyMessages[story.id] && storyMessages[story.id].length > 0 && (
+                                      <ul className="message-list">
+                                        {storyMessages[story.id].map((message, messageIndex) => (
+                                          <li key={`${story.id}-story-message-${messageIndex}`}>
+                                            {message}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            </Fragment>
                           );
                         })}
                       </tbody>
@@ -672,7 +898,12 @@ export default function InterviewClient() {
                 <div className="download-row">
                   <button
                     className="primary"
-                    onClick={() => downloadFile(result.prdMarkdown, "prd.md")}
+                    onClick={() => {
+                      const filename = result.featureName
+                        ? `prd-${kebabCase(result.featureName)}.md`
+                        : "prd.md";
+                      downloadFile(result.prdMarkdown, filename);
+                    }}
                   >
                     Download PRD
                   </button>
