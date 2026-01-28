@@ -82,6 +82,7 @@ main {
   align-content: start;
   max-height: 100%;
   overflow: auto;
+  position: relative;
   transition: transform 300ms ease, opacity 300ms ease;
 }
 
@@ -408,6 +409,7 @@ textarea {
   flex-wrap: wrap;
   gap: 1rem;
   margin-top: 1.5rem;
+  align-items: center;
 }
 
 .button-row button {
@@ -418,6 +420,7 @@ textarea {
   border: 1px solid var(--border-light);
   padding: 2rem;
   background: var(--surface);
+  --input-panel-height: 180px;
 }
 
 .simple-header {
@@ -462,8 +465,8 @@ textarea {
 }
 
 .question-title {
-  font-size: clamp(1.4rem, 2.2vw, 2.15rem);
-  line-height: 1.2;
+  font-size: clamp(1rem, 1.4vw, 1.35rem);
+  line-height: 1.3;
   text-transform: none;
   letter-spacing: -0.01em;
   max-width: 36rem;
@@ -544,9 +547,27 @@ textarea {
 
 .chat-box textarea {
   font-size: 1.125rem;
-  min-height: 180px;
+  min-height: var(--input-panel-height);
+  height: var(--input-panel-height);
   border: 1px solid var(--border-light);
   padding: 1rem;
+}
+
+.record-panel {
+  min-height: var(--input-panel-height);
+  height: var(--input-panel-height);
+  border: 1px solid var(--border-light);
+  padding: 1rem;
+  display: grid;
+  place-items: center;
+  gap: 0.75rem;
+  background: var(--surface);
+  text-align: center;
+  width: 100%;
+}
+
+.record-panel-text {
+  color: var(--muted-foreground);
 }
 
 .chat-box textarea:focus {
@@ -568,8 +589,8 @@ textarea {
 }
 
 .mic-button {
-  width: 68px;
-  height: 68px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 1px solid var(--border-light);
   background: transparent;
@@ -580,21 +601,31 @@ textarea {
 }
 
 .mic-button svg {
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   stroke: currentColor;
   fill: none;
   stroke-width: 1.5;
 }
 
 .mic-button.small {
-  width: 44px;
-  height: 44px;
+  width: 34px;
+  height: 34px;
 }
 
 .mic-button.small svg {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
+}
+
+.mic-button.hero {
+  width: 72px;
+  height: 72px;
+}
+
+.mic-button.hero svg {
+  width: 30px;
+  height: 30px;
 }
 
 .mic-button.disabled {
@@ -733,6 +764,45 @@ textarea {
 
 .feature-table tbody tr:not(.story-message-row):nth-child(odd) td {
   background: var(--surface);
+}
+
+.workspace-right.is-loading {
+  overflow: hidden;
+}
+
+.right-loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(250, 249, 246, 0.92);
+  z-index: 20;
+  border-left: 1px solid var(--border-light);
+}
+
+.right-loading-content {
+  display: grid;
+  gap: 0.75rem;
+  place-items: center;
+  text-align: center;
+  color: var(--foreground);
+}
+
+.cooking-icon {
+  width: 72px;
+  height: 72px;
+  color: var(--foreground);
+  animation: simmer 1.4s ease-in-out infinite;
+}
+
+@keyframes simmer {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
 }
 
 .story-message-row td {

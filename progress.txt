@@ -24,3 +24,10 @@ Preview
 - Question typography is smaller and easier to scan.
 - Feature list is collapsible with summary headers and "Feature 1/2/3" labels.
 - Feature table heading is larger for clearer section hierarchy.
+- Replaced the right-panel loading state with a full overlay and cooking icon.
+- Feature name/summary edit controls are removed; only feature messages remain.
+- Record mode swaps the textarea for a centered mic panel; type mode keeps the textarea only.
+- Input panel height is fixed so record/type toggles don't shift layout.
+- Mic button sizing and button-row alignment were tightened for consistent controls.
+- Question typography is reduced further for better scanning.
+- Exports section stays hidden until results are generated.

@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useMemo, useRef, useState } from "react";
 
 type InterviewTurn = {
   question: string;
@@ -82,8 +82,6 @@ export default function InterviewClient() {
   const [answerDraft, setAnswerDraft] = useState("");
   const [previewFeatures, setPreviewFeatures] = useState<FeatureResult["features"]>([]);
   const [previewStories, setPreviewStories] = useState<FeatureResult["userStories"]>([]);
-  const [editableFeatures, setEditableFeatures] = useState<FeatureResult["features"]>([]);
-  const [hasFeatureEdits, setHasFeatureEdits] = useState(false);
   const [featureMessageDrafts, setFeatureMessageDrafts] = useState<Record<number, string>>({});
   const [featureMessages, setFeatureMessages] = useState<Record<number, string[]>>({});
   const [storyMessageDrafts, setStoryMessageDrafts] = useState<Record<string, string>>({});
@@ -111,12 +109,6 @@ export default function InterviewClient() {
       {}
     );
   }, [previewStories]);
-
-  useEffect(() => {
-    if (interviewDone && !hasFeatureEdits && previewFeatures.length > 0) {
-      setEditableFeatures(previewFeatures);
-    }
-  }, [interviewDone, hasFeatureEdits, previewFeatures]);
 
   const stopRecording = useCallback(() => {
     if (recorderRef.current) {
@@ -180,8 +172,7 @@ export default function InterviewClient() {
       storyMessagesArg: Record<string, string[]> = storyMessages
     ) => {
       const feedback: string[] = [];
-      const featureSource =
-        interviewDone && editableFeatures.length > 0 ? editableFeatures : previewFeatures;
+      const featureSource = previewFeatures;
 
       Object.entries(featureMessagesArg).forEach(([index, messages]) => {
         if (!Array.isArray(messages) || messages.length === 0) return;
@@ -211,9 +202,7 @@ export default function InterviewClient() {
       return feedback;
     },
     [
-      editableFeatures,
       featureMessages,
-      interviewDone,
       previewFeatures,
       storyLookup,
       storyMessages
@@ -276,16 +265,13 @@ export default function InterviewClient() {
         const nextStories = Array.isArray(data.userStories) ? data.userStories : [];
         setPreviewFeatures(nextFeatures);
         setPreviewStories(nextStories);
-        if (!hasFeatureEdits) {
-          setEditableFeatures(nextFeatures);
-        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Preview error.");
       } finally {
         setLoadingPreview(false);
       }
     },
-    [brief, buildFeedback, hasFeatureEdits]
+    [brief, buildFeedback]
   );
 
   const handleStartInterview = async (overrideBrief?: string) => {
@@ -351,16 +337,6 @@ export default function InterviewClient() {
     setStoryMessages({});
   };
 
-  const updateFeatureField = (index: number, field: "name" | "summary", value: string) => {
-    setEditableFeatures((prev) => {
-      const base = prev.length > 0 ? [...prev] : [...previewFeatures];
-      const current = base[index] || { name: "", summary: "", userStoryIds: [] };
-      base[index] = { ...current, [field]: value };
-      return base;
-    });
-    setHasFeatureEdits(true);
-  };
-
   const sendFeatureMessage = async (index: number) => {
     const nextMessage = normalizeText(featureMessageDrafts[index]).trim();
     if (!nextMessage) {
@@ -399,7 +375,6 @@ export default function InterviewClient() {
         brief,
         interview: interviewHistory,
         interviewSummary,
-        featureOverrides: hasFeatureEdits ? editableFeatures : undefined,
         feedback: feedback.length > 0 ? feedback : undefined
       };
       const response = await fetch("/api/generate", {
@@ -431,7 +406,7 @@ export default function InterviewClient() {
     URL.revokeObjectURL(url);
   };
 
-  const displayFeatures = interviewDone && editableFeatures.length > 0 ? editableFeatures : previewFeatures;
+  const displayFeatures = previewFeatures;
   const interviewInProgress = interviewStarted && !interviewDone;
   const hasFirstAnswer = interviewHistory.length > 0;
   const currentQuestionNumber = interviewHistory.length + 1;
@@ -542,35 +517,39 @@ export default function InterviewClient() {
                   
                   {!interviewStarted ? (
                     <>
-                      <textarea
-                        value={brief}
-                        onChange={(e) => setBrief(e.target.value)}
-                        placeholder={
-                          inputMode === "record"
-                            ? "Recording mode: use the mic to capture your brief."
-                            : "Describe the product or feature. Keep it short."
-                        }
-                        readOnly={!allowTyping}
-                      />
+                      {allowRecording ? (
+                        <div className="record-panel">
+                          <button
+                            className={`mic-button hero${allowRecording ? "" : " disabled"}`}
+                            aria-label={recordingTarget === "brief" ? "Stop recording" : "Record brief"}
+                            onClick={() =>
+                              recordingTarget === "brief"
+                                ? stopRecording()
+                                : startAudioRecording("brief", (value) => setBrief(normalizeText(value)))
+                            }
+                            disabled={!allowRecording || transcribingTarget === "brief"}
+                          >
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                              <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
+                              <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
+                              <path d="M12 19.5v2" />
+                              <path d="M8.5 21.5h7" />
+                            </svg>
+                          </button>
+                          <div className="record-panel-text mono">
+                            {recordingTarget === "brief" ? "Recording..." : "Tap to record your brief"}
+                          </div>
+                          {transcribingTarget === "brief" && <span className="mono">Transcribing...</span>}
+                        </div>
+                      ) : (
+                        <textarea
+                          value={brief}
+                          onChange={(e) => setBrief(e.target.value)}
+                          placeholder="Describe the product or feature. Keep it short."
+                          readOnly={!allowTyping}
+                        />
+                      )}
                       <div className="button-row">
-                        <button
-                          className={`mic-button${allowRecording ? "" : " disabled"}`}
-                          aria-label={recordingTarget === "brief" ? "Stop recording" : "Record brief"}
-                          onClick={() =>
-                            recordingTarget === "brief"
-                              ? stopRecording()
-                              : startAudioRecording("brief", (value) => setBrief(normalizeText(value)))
-                          }
-                          disabled={!allowRecording || transcribingTarget === "brief"}
-                        >
-                          <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
-                            <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
-                            <path d="M12 19.5v2" />
-                            <path d="M8.5 21.5h7" />
-                          </svg>
-                        </button>
-                        {transcribingTarget === "brief" && <span className="mono">Transcribing...</span>}
                         <button className="primary" onClick={() => handleStartInterview()} disabled={loadingInterview}>
                           {loadingInterview ? "Starting..." : startButtonLabel}
                         </button>
@@ -578,37 +557,41 @@ export default function InterviewClient() {
                     </>
                   ) : (
                     <>
-                      <textarea
-                        value={answerDraft}
-                        onChange={(e) => setAnswerDraft(e.target.value)}
-                        placeholder={
-                          inputMode === "record"
-                            ? "Recording mode: use the mic to capture your answer."
-                            : "Answer the current question."
-                        }
-                        readOnly={!allowTyping}
-                      />
+                      {allowRecording ? (
+                        <div className="record-panel">
+                          <button
+                            className={`mic-button hero${allowRecording ? "" : " disabled"}`}
+                            aria-label={recordingTarget === "answer" ? "Stop recording answer" : "Record answer"}
+                            onClick={() =>
+                              recordingTarget === "answer"
+                                ? stopRecording()
+                                : startAudioRecording("answer", (value) => {
+                                    setAnswerDraft(normalizeText(value));
+                                  })
+                            }
+                            disabled={!allowRecording || transcribingTarget === "answer"}
+                          >
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                              <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
+                              <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
+                              <path d="M12 19.5v2" />
+                              <path d="M8.5 21.5h7" />
+                            </svg>
+                          </button>
+                          <div className="record-panel-text mono">
+                            {recordingTarget === "answer" ? "Recording..." : "Tap to record your answer"}
+                          </div>
+                          {transcribingTarget === "answer" && <span className="mono">Transcribing...</span>}
+                        </div>
+                      ) : (
+                        <textarea
+                          value={answerDraft}
+                          onChange={(e) => setAnswerDraft(e.target.value)}
+                          placeholder="Answer the current question."
+                          readOnly={!allowTyping}
+                        />
+                      )}
                       <div className="button-row">
-                        <button
-                          className={`mic-button${allowRecording ? "" : " disabled"}`}
-                          aria-label={recordingTarget === "answer" ? "Stop recording answer" : "Record answer"}
-                          onClick={() =>
-                            recordingTarget === "answer"
-                              ? stopRecording()
-                              : startAudioRecording("answer", (value) => {
-                                  setAnswerDraft(normalizeText(value));
-                                })
-                          }
-                          disabled={!allowRecording || transcribingTarget === "answer"}
-                        >
-                          <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
-                            <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
-                            <path d="M12 19.5v2" />
-                            <path d="M8.5 21.5h7" />
-                          </svg>
-                        </button>
-                        {transcribingTarget === "answer" && <span className="mono">Transcribing...</span>}
                         <button className="primary" onClick={() => handleSendAnswer()} disabled={loadingInterview}>
                           {loadingInterview ? "Waiting..." : "Send Answer"}
                         </button>
@@ -640,24 +623,74 @@ export default function InterviewClient() {
           </div>
         </div>
 
-        <div className="workspace-right">
+        <div className={`workspace-right${loadingPreview ? " is-loading" : ""}`}>
+          {loadingPreview && (
+            <div className="right-loading-overlay" aria-live="polite">
+              <div className="right-loading-content">
+                <svg className="cooking-icon" viewBox="0 0 64 64" aria-hidden="true">
+                  <path
+                    d="M22 18c0-4 3-7 7-7"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M32 16c0-4 3-7 7-7"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M42 18c0-4 3-7 7-7"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <rect
+                    x="14"
+                    y="28"
+                    width="36"
+                    height="20"
+                    rx="4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                  <path
+                    d="M20 28l4-8h16l4 8"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M12 34h-4m50 0h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M24 24h16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="mono">Cooking up your feature table...</div>
+              </div>
+            </div>
+          )}
           <section className="section">
             <div className="container">
               <h2 className="section-title feature-table-title">Feature Table</h2>
               <p className="muted">
                 Features and user stories update as the interview progresses.
-                {loadingPreview ? " Updating..." : ""}
               </p>
-              {loadingPreview && (
-                <div className="loading-indicator" aria-live="polite">
-                  <span className="mono">Finalizing table</span>
-                  <span className="loading-dots" aria-hidden="true">
-                    <span />
-                    <span />
-                    <span />
-                  </span>
-                </div>
-              )}
               {displayFeatures.length > 0 ? (
                 displayFeatures.map((feature, index) => (
                   <details
@@ -673,64 +706,6 @@ export default function InterviewClient() {
                       {feature.summary && <p className="feature-short">{feature.summary}</p>}
                     </summary>
                     <div className="feature-content">
-                      {interviewDone && (
-                        <div className="feature-edit">
-                          <label className="mono">Feature Name</label>
-                          <div className="edit-control">
-                            <input
-                              value={feature.name}
-                              onChange={(e) => updateFeatureField(index, "name", e.target.value)}
-                              readOnly={!allowTyping}
-                            />
-                            <button
-                              className={`mic-button small${allowRecording ? "" : " disabled"}`}
-                              aria-label="Record feature name"
-                              onClick={() =>
-                                recordingTarget === `feature-name-${index}`
-                                  ? stopRecording()
-                                  : startAudioRecording(`feature-name-${index}`, (value) =>
-                                      updateFeatureField(index, "name", value)
-                                    )
-                              }
-                              disabled={!allowRecording || transcribingTarget === `feature-name-${index}`}
-                            >
-                              <svg viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
-                                <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
-                                <path d="M12 19.5v2" />
-                                <path d="M8.5 21.5h7" />
-                              </svg>
-                            </button>
-                          </div>
-                          <label className="mono">Summary</label>
-                          <div className="edit-control">
-                            <textarea
-                              value={feature.summary}
-                              onChange={(e) => updateFeatureField(index, "summary", e.target.value)}
-                              readOnly={!allowTyping}
-                            />
-                            <button
-                              className={`mic-button small${allowRecording ? "" : " disabled"}`}
-                              aria-label="Record feature summary"
-                              onClick={() =>
-                                recordingTarget === `feature-summary-${index}`
-                                  ? stopRecording()
-                                  : startAudioRecording(`feature-summary-${index}`, (value) =>
-                                      updateFeatureField(index, "summary", value)
-                                    )
-                              }
-                              disabled={!allowRecording || transcribingTarget === `feature-summary-${index}`}
-                            >
-                              <svg viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
-                                <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
-                                <path d="M12 19.5v2" />
-                                <path d="M8.5 21.5h7" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      )}
                       {interviewDone && (
                         <div className="message-panel">
                           <div className="mono">Message about this feature</div>
@@ -907,10 +882,10 @@ export default function InterviewClient() {
             </div>
           </section>
 
-          <section className="section">
-            <div className="container">
-              <h2 className="section-title">Exports</h2>
-              {result ? (
+          {result && (
+            <section className="section">
+              <div className="container">
+                <h2 className="section-title">Exports</h2>
                 <div className="download-row">
                   <button
                     className="primary"
@@ -932,14 +907,9 @@ export default function InterviewClient() {
                     Download JSON
                   </button>
                 </div>
-              ) : (
-                <div className="card">
-                  <div className="mono">Not ready yet</div>
-                  <p>Complete the interview to generate exports.</p>
-                </div>
-              )}
-            </div>
-          </section>
+              </div>
+            </section>
+          )}
         </div>
       </div>
     </main>
