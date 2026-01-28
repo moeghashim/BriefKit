@@ -7,17 +7,32 @@ type InterviewTurn = {
   answer: string;
 };
 
-function buildClarifyingAnswers(brief: string, interview: InterviewTurn[]) {
+function formatFeedback(feedback: unknown) {
+  if (!Array.isArray(feedback)) {
+    return "";
+  }
+  const items = feedback
+    .filter((item) => typeof item === "string")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (items.length === 0) {
+    return "";
+  }
+  return `Feedback:\n${items.map((item) => `- ${item}`).join("\n")}`;
+}
+
+function buildClarifyingAnswers(brief: string, interview: InterviewTurn[], feedback?: unknown) {
   const lines = interview.map((turn, index) => {
     return `Q${index + 1}: ${turn.question}\nA${index + 1}: ${turn.answer}`;
   });
-  return [`Brief: ${brief}`, ...lines].join("\n\n");
+  const feedbackBlock = formatFeedback(feedback);
+  return [`Brief: ${brief}`, ...lines, feedbackBlock].filter(Boolean).join("\n\n");
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { brief, interview } = body || {};
+    const { brief, interview, feedback } = body || {};
 
     if (!brief) {
       return Response.json({ error: "Brief is required" }, { status: 400 });
@@ -28,7 +43,11 @@ export async function POST(request: Request) {
     const featureName = inferred.featureName || "Core Feature";
     const description = inferred.description || brief;
 
-    const clarifyingAnswers = buildClarifyingAnswers(brief, Array.isArray(interview) ? interview : []);
+    const clarifyingAnswers = buildClarifyingAnswers(
+      brief,
+      Array.isArray(interview) ? interview : [],
+      feedback
+    );
 
     const prdData = await generatePrdData({
       projectName,

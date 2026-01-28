@@ -434,6 +434,8 @@ export default function InterviewClient() {
   const displayFeatures = interviewDone && editableFeatures.length > 0 ? editableFeatures : previewFeatures;
   const interviewInProgress = interviewStarted && !interviewDone;
   const hasFirstAnswer = interviewHistory.length > 0;
+  const currentQuestionNumber = interviewHistory.length + 1;
+  const showQuestionNumber = interviewInProgress && currentQuestionNumber > 1;
   const startButtonLabel = interviewStarted ? "Restart Interview" : "Start Interview";
   const allowRecording = inputMode === "record";
   const allowTyping = inputMode === "type";
@@ -467,7 +469,9 @@ export default function InterviewClient() {
                 ) : (
                   <>
                     <div className="simple-header">
-                      <div className="mono">Current Question</div>
+                      <div className="mono">
+                        {showQuestionNumber ? `Question ${currentQuestionNumber}` : "Current Question"}
+                      </div>
                       <h1 className="hero-title question-title">
                         {currentQuestion || "Preparing the first question..."}
                       </h1>
@@ -639,7 +643,7 @@ export default function InterviewClient() {
         <div className="workspace-right">
           <section className="section">
             <div className="container">
-              <h2>Feature Table</h2>
+              <h2 className="section-title feature-table-title">Feature Table</h2>
               <p className="muted">
                 Features and user stories update as the interview progresses.
                 {loadingPreview ? " Updating..." : ""}
@@ -656,132 +660,141 @@ export default function InterviewClient() {
               )}
               {displayFeatures.length > 0 ? (
                 displayFeatures.map((feature, index) => (
-                  <div key={`${feature.name}-${index}`} className="feature-block">
-                    {interviewDone ? (
-                      <div className="feature-edit">
-                        <label className="mono">Feature Name</label>
-                        <div className="edit-control">
-                          <input
-                            value={feature.name}
-                            onChange={(e) => updateFeatureField(index, "name", e.target.value)}
-                            readOnly={!allowTyping}
-                          />
-                          <button
-                            className={`mic-button small${allowRecording ? "" : " disabled"}`}
-                            aria-label="Record feature name"
-                            onClick={() =>
-                              recordingTarget === `feature-name-${index}`
-                                ? stopRecording()
-                                : startAudioRecording(`feature-name-${index}`, (value) =>
-                                    updateFeatureField(index, "name", value)
-                                  )
-                            }
-                            disabled={!allowRecording || transcribingTarget === `feature-name-${index}`}
-                          >
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                              <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
-                              <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
-                              <path d="M12 19.5v2" />
-                              <path d="M8.5 21.5h7" />
-                            </svg>
-                          </button>
+                  <details
+                    key={`${feature.name}-${index}`}
+                    className="feature-block"
+                    open={index === 0}
+                  >
+                    <summary className="feature-summary-row">
+                      <div className="feature-summary-header">
+                        <span className="feature-label mono">Feature {index + 1}</span>
+                        <span className="feature-name">{feature.name || `Feature ${index + 1}`}</span>
+                      </div>
+                      {feature.summary && <p className="feature-short">{feature.summary}</p>}
+                    </summary>
+                    <div className="feature-content">
+                      {interviewDone && (
+                        <div className="feature-edit">
+                          <label className="mono">Feature Name</label>
+                          <div className="edit-control">
+                            <input
+                              value={feature.name}
+                              onChange={(e) => updateFeatureField(index, "name", e.target.value)}
+                              readOnly={!allowTyping}
+                            />
+                            <button
+                              className={`mic-button small${allowRecording ? "" : " disabled"}`}
+                              aria-label="Record feature name"
+                              onClick={() =>
+                                recordingTarget === `feature-name-${index}`
+                                  ? stopRecording()
+                                  : startAudioRecording(`feature-name-${index}`, (value) =>
+                                      updateFeatureField(index, "name", value)
+                                    )
+                              }
+                              disabled={!allowRecording || transcribingTarget === `feature-name-${index}`}
+                            >
+                              <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
+                                <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
+                                <path d="M12 19.5v2" />
+                                <path d="M8.5 21.5h7" />
+                              </svg>
+                            </button>
+                          </div>
+                          <label className="mono">Summary</label>
+                          <div className="edit-control">
+                            <textarea
+                              value={feature.summary}
+                              onChange={(e) => updateFeatureField(index, "summary", e.target.value)}
+                              readOnly={!allowTyping}
+                            />
+                            <button
+                              className={`mic-button small${allowRecording ? "" : " disabled"}`}
+                              aria-label="Record feature summary"
+                              onClick={() =>
+                                recordingTarget === `feature-summary-${index}`
+                                  ? stopRecording()
+                                  : startAudioRecording(`feature-summary-${index}`, (value) =>
+                                      updateFeatureField(index, "summary", value)
+                                    )
+                              }
+                              disabled={!allowRecording || transcribingTarget === `feature-summary-${index}`}
+                            >
+                              <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
+                                <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
+                                <path d="M12 19.5v2" />
+                                <path d="M8.5 21.5h7" />
+                              </svg>
+                            </button>
+                          </div>
                         </div>
-                        <label className="mono">Summary</label>
-                        <div className="edit-control">
-                          <textarea
-                            value={feature.summary}
-                            onChange={(e) => updateFeatureField(index, "summary", e.target.value)}
-                            readOnly={!allowTyping}
-                          />
-                          <button
-                            className={`mic-button small${allowRecording ? "" : " disabled"}`}
-                            aria-label="Record feature summary"
-                            onClick={() =>
-                              recordingTarget === `feature-summary-${index}`
-                                ? stopRecording()
-                                : startAudioRecording(`feature-summary-${index}`, (value) =>
-                                    updateFeatureField(index, "summary", value)
-                                  )
-                            }
-                            disabled={!allowRecording || transcribingTarget === `feature-summary-${index}`}
-                          >
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                              <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
-                              <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
-                              <path d="M12 19.5v2" />
-                              <path d="M8.5 21.5h7" />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="feature-title">{feature.name}</div>
-                        <p className="feature-summary">{feature.summary}</p>
-                      </>
-                    )}
-                    <div className="message-panel">
-                      <div className="mono">Message about this feature</div>
-                      <div className="edit-control">
-                        <textarea
-                          value={featureMessageDrafts[index] || ""}
-                          onChange={(e) =>
-                            setFeatureMessageDrafts((prev) => ({
-                              ...prev,
-                              [index]: e.target.value
-                            }))
-                          }
-                          placeholder={
-                            inputMode === "record"
-                              ? "Recording mode: use the mic to capture a feature note."
-                              : "Type a note about this feature."
-                          }
-                          readOnly={!allowTyping}
-                        />
-                        <button
-                          className={`mic-button small${allowRecording ? "" : " disabled"}`}
-                          aria-label="Record feature message"
-                          onClick={() =>
-                            recordingTarget === `feature-message-${index}`
-                              ? stopRecording()
-                              : startAudioRecording(`feature-message-${index}`, (value) =>
-                                  setFeatureMessageDrafts((prev) => ({
-                                    ...prev,
-                                    [index]: normalizeText(value)
-                                  }))
-                                )
-                          }
-                          disabled={!allowRecording || transcribingTarget === `feature-message-${index}`}
-                        >
-                          <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
-                            <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
-                            <path d="M12 19.5v2" />
-                            <path d="M8.5 21.5h7" />
-                          </svg>
-                        </button>
-                      </div>
-                      <div className="message-actions">
-                        <button
-                          className="secondary"
-                          onClick={() => sendFeatureMessage(index)}
-                          disabled={loadingPreview}
-                        >
-                          Send Message
-                        </button>
-                        {transcribingTarget === `feature-message-${index}` && (
-                          <span className="mono">Transcribing...</span>
-                        )}
-                      </div>
-                      {featureMessages[index] && featureMessages[index].length > 0 && (
-                        <ul className="message-list">
-                          {featureMessages[index].map((message, messageIndex) => (
-                            <li key={`${index}-feature-message-${messageIndex}`}>{message}</li>
-                          ))}
-                        </ul>
                       )}
-                    </div>
-                    <table className="feature-table">
+                      {interviewDone && (
+                        <div className="message-panel">
+                          <div className="mono">Message about this feature</div>
+                          <div className="edit-control">
+                            <textarea
+                              value={featureMessageDrafts[index] || ""}
+                              onChange={(e) =>
+                                setFeatureMessageDrafts((prev) => ({
+                                  ...prev,
+                                  [index]: e.target.value
+                                }))
+                              }
+                              placeholder={
+                                inputMode === "record"
+                                  ? "Recording mode: use the mic to capture a feature note."
+                                  : "Type a note about this feature."
+                              }
+                              readOnly={!allowTyping}
+                            />
+                            <button
+                              className={`mic-button small${allowRecording ? "" : " disabled"}`}
+                              aria-label="Record feature message"
+                              onClick={() =>
+                                recordingTarget === `feature-message-${index}`
+                                  ? stopRecording()
+                                  : startAudioRecording(`feature-message-${index}`, (value) =>
+                                      setFeatureMessageDrafts((prev) => ({
+                                        ...prev,
+                                        [index]: normalizeText(value)
+                                      }))
+                                    )
+                              }
+                              disabled={!allowRecording || transcribingTarget === `feature-message-${index}`}
+                            >
+                              <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
+                                <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
+                                <path d="M12 19.5v2" />
+                                <path d="M8.5 21.5h7" />
+                              </svg>
+                            </button>
+                          </div>
+                          <div className="message-actions">
+                            <button
+                              className="secondary"
+                              onClick={() => sendFeatureMessage(index)}
+                              disabled={loadingPreview}
+                            >
+                              Send Message
+                            </button>
+                            {transcribingTarget === `feature-message-${index}` && (
+                              <span className="mono">Transcribing...</span>
+                            )}
+                          </div>
+                          {featureMessages[index] && featureMessages[index].length > 0 && (
+                            <ul className="message-list">
+                              {featureMessages[index].map((message, messageIndex) => (
+                                <li key={`${index}-feature-message-${messageIndex}`}>{message}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )}
+                      <table className="feature-table">
                       <thead>
                         <tr>
                           <th>Story</th>
@@ -810,69 +823,71 @@ export default function InterviewClient() {
                               </tr>
                               <tr className="story-message-row">
                                 <td colSpan={3}>
-                                  <div className="message-panel story-message">
-                                    <div className="mono">Message about {story.id}</div>
-                                    <div className="edit-control">
-                                      <textarea
-                                        value={storyMessageDrafts[story.id] || ""}
-                                        onChange={(e) =>
-                                          setStoryMessageDrafts((prev) => ({
-                                            ...prev,
-                                            [story.id]: e.target.value
-                                          }))
-                                        }
-                                        placeholder={
-                                          inputMode === "record"
-                                            ? "Recording mode: use the mic to capture a story note."
-                                            : "Type a note about this story."
-                                        }
-                                        readOnly={!allowTyping}
-                                      />
-                                      <button
-                                        className={`mic-button small${allowRecording ? "" : " disabled"}`}
-                                        aria-label={`Record message for ${story.id}`}
-                                        onClick={() =>
-                                          recordingTarget === `story-message-${story.id}`
-                                            ? stopRecording()
-                                            : startAudioRecording(`story-message-${story.id}`, (value) =>
-                                                setStoryMessageDrafts((prev) => ({
-                                                  ...prev,
-                                                  [story.id]: normalizeText(value)
-                                                }))
-                                              )
-                                        }
-                                        disabled={!allowRecording || transcribingTarget === `story-message-${story.id}`}
-                                      >
-                                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                                          <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
-                                          <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
-                                          <path d="M12 19.5v2" />
-                                          <path d="M8.5 21.5h7" />
-                                        </svg>
-                                      </button>
-                                    </div>
-                                    <div className="message-actions">
-                                      <button
-                                        className="secondary"
-                                        onClick={() => sendStoryMessage(story.id)}
-                                        disabled={loadingPreview}
-                                      >
-                                        Send Message
-                                      </button>
-                                      {transcribingTarget === `story-message-${story.id}` && (
-                                        <span className="mono">Transcribing...</span>
+                                  {interviewDone && (
+                                    <div className="message-panel story-message">
+                                      <div className="mono">Message about {story.id}</div>
+                                      <div className="edit-control">
+                                        <textarea
+                                          value={storyMessageDrafts[story.id] || ""}
+                                          onChange={(e) =>
+                                            setStoryMessageDrafts((prev) => ({
+                                              ...prev,
+                                              [story.id]: e.target.value
+                                            }))
+                                          }
+                                          placeholder={
+                                            inputMode === "record"
+                                              ? "Recording mode: use the mic to capture a story note."
+                                              : "Type a note about this story."
+                                          }
+                                          readOnly={!allowTyping}
+                                        />
+                                        <button
+                                          className={`mic-button small${allowRecording ? "" : " disabled"}`}
+                                          aria-label={`Record message for ${story.id}`}
+                                          onClick={() =>
+                                            recordingTarget === `story-message-${story.id}`
+                                              ? stopRecording()
+                                              : startAudioRecording(`story-message-${story.id}`, (value) =>
+                                                  setStoryMessageDrafts((prev) => ({
+                                                    ...prev,
+                                                    [story.id]: normalizeText(value)
+                                                  }))
+                                                )
+                                          }
+                                          disabled={!allowRecording || transcribingTarget === `story-message-${story.id}`}
+                                        >
+                                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                                            <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
+                                            <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
+                                            <path d="M12 19.5v2" />
+                                            <path d="M8.5 21.5h7" />
+                                          </svg>
+                                        </button>
+                                      </div>
+                                      <div className="message-actions">
+                                        <button
+                                          className="secondary"
+                                          onClick={() => sendStoryMessage(story.id)}
+                                          disabled={loadingPreview}
+                                        >
+                                          Send Message
+                                        </button>
+                                        {transcribingTarget === `story-message-${story.id}` && (
+                                          <span className="mono">Transcribing...</span>
+                                        )}
+                                      </div>
+                                      {storyMessages[story.id] && storyMessages[story.id].length > 0 && (
+                                        <ul className="message-list">
+                                          {storyMessages[story.id].map((message, messageIndex) => (
+                                            <li key={`${story.id}-story-message-${messageIndex}`}>
+                                              {message}
+                                            </li>
+                                          ))}
+                                        </ul>
                                       )}
                                     </div>
-                                    {storyMessages[story.id] && storyMessages[story.id].length > 0 && (
-                                      <ul className="message-list">
-                                        {storyMessages[story.id].map((message, messageIndex) => (
-                                          <li key={`${story.id}-story-message-${messageIndex}`}>
-                                            {message}
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    )}
-                                  </div>
+                                  )}
                                 </td>
                               </tr>
                             </Fragment>
@@ -880,7 +895,8 @@ export default function InterviewClient() {
                         })}
                       </tbody>
                     </table>
-                  </div>
+                    </div>
+                  </details>
                 ))
               ) : (
                 <div className="card">
@@ -893,7 +909,7 @@ export default function InterviewClient() {
 
           <section className="section">
             <div className="container">
-              <h2>Exports</h2>
+              <h2 className="section-title">Exports</h2>
               {result ? (
                 <div className="download-row">
                   <button

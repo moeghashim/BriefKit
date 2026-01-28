@@ -7,6 +7,7 @@
   --accent-foreground: #ffffff;
   --border: #000000;
   --border-light: #e5e5e5;
+  --surface: #fafafa;
   --card: #ffffff;
   --card-foreground: #000000;
   --ring: #000000;
@@ -43,7 +44,7 @@ body::before {
     repeating-linear-gradient(0deg, transparent, transparent 1px, #000 1px, #000 2px),
     url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
   background-size: 100% 4px, 256px 256px;
-  opacity: 0.02;
+  opacity: 0.015;
   z-index: 0;
 }
 
@@ -70,7 +71,7 @@ main {
   display: flex;
   flex-direction: column;
   height: 100%;
-  border-right: 2px solid var(--foreground);
+  border-right: 1px solid var(--border-light);
   transition: transform 300ms ease, opacity 300ms ease;
   overflow: hidden;
 }
@@ -94,8 +95,8 @@ main {
 .fixed-input-area {
   flex: 0 0 auto;
   z-index: 10;
-  background: var(--background);
-  border-top: 2px solid var(--foreground);
+  background: var(--surface);
+  border-top: 1px solid var(--border-light);
 }
 
 .workspace:not(.split) .workspace-right {
@@ -114,7 +115,7 @@ main {
 }
 
 .workspace.split .workspace-left {
-  border-right: 2px solid var(--foreground);
+  border-right: 1px solid var(--border-light);
   padding-right: 0;
 }
 
@@ -129,7 +130,7 @@ main {
 
 .workspace .section {
   padding: 1.5rem 0;
-  border-bottom: 2px solid var(--foreground);
+  border-bottom: 1px solid var(--border-light);
 }
 
 h1,
@@ -139,6 +140,11 @@ h4 {
   font-family: var(--font-display), Georgia, serif;
   letter-spacing: -0.04em;
   margin: 0;
+}
+
+h2 {
+  font-size: 1.5rem;
+  line-height: 1.2;
 }
 
 p {
@@ -262,7 +268,7 @@ textarea {
 
 .section {
   padding: 4rem 0;
-  border-bottom: 4px solid var(--foreground);
+  border-bottom: 1px solid var(--border-light);
 }
 
 .section.compact {
@@ -287,7 +293,7 @@ textarea {
 .section.invert {
   background: var(--foreground);
   color: var(--background);
-  border-bottom: 4px solid var(--foreground);
+  border-bottom: 1px solid var(--foreground);
   position: relative;
 }
 
@@ -330,8 +336,8 @@ textarea {
 
 .rule-row .rule {
   flex: 1;
-  height: 4px;
-  background: var(--foreground);
+  height: 2px;
+  background: var(--border-light);
 }
 
 .rule-row .square {
@@ -354,9 +360,9 @@ textarea {
 }
 
 .card {
-  border: 1px solid var(--foreground);
+  border: 1px solid var(--border-light);
   padding: 2rem;
-  background: var(--card);
+  background: var(--surface);
   transition: all 100ms linear;
 }
 
@@ -367,19 +373,14 @@ textarea {
 }
 
 .card:hover {
-  background: var(--foreground);
-  color: var(--background);
-}
-
-.card:hover .mono,
-.card:hover .muted {
-  color: var(--background);
+  border-color: var(--foreground);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
 }
 
 .mono {
   font-family: var(--font-mono), monospace;
   text-transform: uppercase;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.16em;
   font-size: 0.75rem;
 }
 
@@ -414,13 +415,24 @@ textarea {
 }
 
 .chat-box {
-  border: 2px solid var(--foreground);
-  padding: 2.5rem;
-  background: var(--card);
+  border: 1px solid var(--border-light);
+  padding: 2rem;
+  background: var(--surface);
 }
 
 .simple-header {
   margin-bottom: 2rem;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  margin-bottom: 0.35rem;
+}
+
+.feature-table-title {
+  font-size: 1.85rem;
 }
 
 .brief-section {
@@ -450,11 +462,15 @@ textarea {
 }
 
 .question-title {
-  font-size: clamp(1.6rem, 3.2vw, 2.4rem);
+  font-size: clamp(1.4rem, 2.2vw, 2.15rem);
+  line-height: 1.2;
+  text-transform: none;
+  letter-spacing: -0.01em;
+  max-width: 36rem;
 }
 
 .question-card {
-  border: 2px solid var(--foreground);
+  border: 1px solid var(--border-light);
   padding: 2rem;
   margin-bottom: 2rem;
 }
@@ -464,10 +480,10 @@ textarea {
   flex-wrap: wrap;
   gap: 0.35rem;
   padding: 0.35rem;
-  border: 2px solid var(--foreground);
+  border: 1px solid var(--border-light);
   border-radius: 999px;
   margin-bottom: 1.5rem;
-  background: var(--background);
+  background: var(--surface);
 }
 
 .mode-button {
@@ -491,20 +507,22 @@ textarea {
 }
 
 .history-block {
-  border: 2px solid var(--foreground);
-  padding: 2rem;
+  border: 1px solid var(--border-light);
+  padding: 1.5rem;
+  background: var(--surface);
   margin-top: 2rem;
   display: grid;
   gap: 1.5rem;
 }
 
 .history-item {
-  border: 1px solid var(--foreground);
-  padding: 1.5rem;
+  border: 1px solid var(--border-light);
+  padding: 1.25rem;
+  background: var(--card);
 }
 
 .chat-thread {
-  border: 2px solid var(--foreground);
+  border: 1px solid var(--border-light);
   padding: 2rem;
   margin: 2rem 0;
   display: grid;
@@ -512,7 +530,7 @@ textarea {
 }
 
 .chat-message {
-  border: 1px solid var(--foreground);
+  border: 1px solid var(--border-light);
   padding: 1.5rem;
 }
 
@@ -527,12 +545,12 @@ textarea {
 .chat-box textarea {
   font-size: 1.125rem;
   min-height: 180px;
-  border: 2px solid var(--foreground);
+  border: 1px solid var(--border-light);
   padding: 1rem;
 }
 
 .chat-box textarea:focus {
-  border: 4px solid var(--foreground);
+  border: 2px solid var(--foreground);
 }
 
 .icon-button {
@@ -553,7 +571,7 @@ textarea {
   width: 68px;
   height: 68px;
   padding: 0;
-  border: 2px solid var(--foreground);
+  border: 1px solid var(--border-light);
   background: transparent;
   display: inline-flex;
   align-items: center;
@@ -597,7 +615,7 @@ textarea {
 }
 
 .message-panel {
-  border: 1px solid var(--foreground);
+  border: 1px solid var(--border-light);
   padding: 1.5rem;
   margin: 1.5rem 0;
   background: var(--card);
@@ -620,7 +638,7 @@ textarea {
 }
 
 .message-list li {
-  border: 1px solid var(--foreground);
+  border: 1px solid var(--border-light);
   padding: 0.75rem;
 }
 
@@ -641,28 +659,67 @@ textarea {
 }
 
 .feature-block {
-  margin-bottom: 3rem;
-}
-
-.feature-title {
-  font-size: 2.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.feature-summary {
   margin-bottom: 1.5rem;
+  border: 1px solid var(--border-light);
+  background: var(--surface);
+}
+
+.feature-block[open] .feature-summary-row {
+  border-bottom: 1px solid var(--border-light);
+}
+
+.feature-summary-row {
+  list-style: none;
+  cursor: pointer;
+  padding: 1.5rem 2rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.feature-summary-row::-webkit-details-marker {
+  display: none;
+}
+
+.feature-summary-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.feature-label {
+  color: var(--muted-foreground);
+}
+
+.feature-name {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.6rem;
+  letter-spacing: -0.02em;
+}
+
+.feature-short {
+  margin: 0;
+  color: var(--muted-foreground);
+  max-width: 40rem;
+}
+
+.feature-content {
+  padding: 1.5rem 2rem 2rem;
+  display: grid;
+  gap: 1.5rem;
 }
 
 .feature-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.95rem;
+  background: var(--card);
 }
 
 .feature-table th,
 .feature-table td {
-  border: 1px solid var(--foreground);
-  padding: 1rem;
+  border: 1px solid var(--border-light);
+  padding: 1rem 1.25rem;
   vertical-align: top;
 }
 
@@ -671,16 +728,25 @@ textarea {
   text-transform: uppercase;
   letter-spacing: 0.2em;
   font-size: 0.75rem;
+  background: var(--muted);
+}
+
+.feature-table tbody tr:not(.story-message-row):nth-child(odd) td {
+  background: var(--surface);
+}
+
+.story-message-row td {
+  background: var(--card);
 }
 
 .loading-indicator {
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
-  border: 1px solid var(--foreground);
+  border: 1px solid var(--border-light);
   padding: 0.5rem 0.9rem;
   margin-bottom: 1.5rem;
-  background: var(--card);
+  background: var(--surface);
 }
 
 .loading-dots {

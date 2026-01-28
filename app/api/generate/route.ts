@@ -14,14 +14,34 @@ type FeatureOverride = {
   userStoryIds: string[];
 };
 
-function buildClarifyingAnswers(brief: string, interview: InterviewTurn[], summary?: string[]) {
+function formatFeedback(feedback: unknown) {
+  if (!Array.isArray(feedback)) {
+    return "";
+  }
+  const items = feedback
+    .filter((item) => typeof item === "string")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (items.length === 0) {
+    return "";
+  }
+  return `Feedback:\n${items.map((item) => `- ${item}`).join("\n")}`;
+}
+
+function buildClarifyingAnswers(
+  brief: string,
+  interview: InterviewTurn[],
+  summary?: string[],
+  feedback?: unknown
+) {
   const lines = interview.map((turn, index) => {
     return `Q${index + 1}: ${turn.question}\nA${index + 1}: ${turn.answer}`;
   });
   const summaryBlock = Array.isArray(summary) && summary.length > 0
     ? `Summary:\n${summary.map((item) => `- ${item}`).join("\n")}`
     : "";
-  return [`Brief: ${brief}`, ...lines, summaryBlock].filter(Boolean).join("\n\n");
+  const feedbackBlock = formatFeedback(feedback);
+  return [`Brief: ${brief}`, ...lines, summaryBlock, feedbackBlock].filter(Boolean).join("\n\n");
 }
 
 function applyFeatureOverrides(
@@ -50,7 +70,7 @@ function applyFeatureOverrides(
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { brief, interview, interviewSummary, featureOverrides } = body || {};
+    const { brief, interview, interviewSummary, featureOverrides, feedback } = body || {};
 
     if (!brief) {
       return Response.json({ error: "Brief is required" }, { status: 400 });
@@ -64,7 +84,8 @@ export async function POST(request: Request) {
     const clarifyingAnswers = buildClarifyingAnswers(
       brief,
       Array.isArray(interview) ? interview : [],
-      interviewSummary
+      interviewSummary,
+      feedback
     );
 
     const prdData = await generatePrdData({
@@ -99,6 +120,7 @@ export async function POST(request: Request) {
 
     return Response.json({
       ...prdData,
+      featureName,
       features: mergedFeatures || prdData.features,
       prdMarkdown,
       prdJson
