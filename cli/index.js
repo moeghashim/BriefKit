@@ -107,6 +107,15 @@ function printPreview(features, stories) {
     output.write("\nUser Stories\n");
     stories.forEach((story) => {
       output.write(`- ${story.id}: ${story.title}\n`);
+      if (story.description) {
+        output.write(`  ${story.description}\n`);
+      }
+      if (Array.isArray(story.acceptanceCriteria) && story.acceptanceCriteria.length > 0) {
+        output.write("  Acceptance Criteria\n");
+        story.acceptanceCriteria.forEach((item) => {
+          output.write(`    - ${item}\n`);
+        });
+      }
     });
   }
 }
@@ -132,7 +141,7 @@ async function generatePreview({ brief, history, summary, feedback }) {
   };
 }
 
-async function runInterview(brief) {
+async function runInterview(brief, { skipPreview } = {}) {
   const history = [];
   let done = false;
   let summary = null;
@@ -162,83 +171,87 @@ async function runInterview(brief) {
     done = Boolean(step.done);
     summary = Array.isArray(step.summary) ? step.summary : summary;
 
-    const feedback = buildFeedback(featureMessages, storyMessages, previewFeatures, previewStories);
-    const preview = await generatePreview({ brief, history, summary, feedback });
-    previewFeatures = preview.features;
-    previewStories = preview.userStories;
-    printPreview(previewFeatures, previewStories);
-
-    let feedbackLoop = true;
-    while (feedbackLoop) {
-      const choice = (await promptUser("Add message? [f]eature, [s]tory, [n]ext, /finish, /restart: "))
-        .trim()
-        .toLowerCase();
-      if (!choice || choice === "n") {
-        feedbackLoop = false;
-        continue;
-      }
-      if (choice === "/restart") {
-        return { restart: true };
-      }
-      if (choice === "/finish") {
-        done = true;
-        feedbackLoop = false;
-        continue;
-      }
-      if (choice === "f") {
-        if (!Array.isArray(previewFeatures) || previewFeatures.length === 0) {
-          output.write("No features available yet.\n");
-          continue;
-        }
-        const indexInput = (await promptUser("Feature number: ")).trim();
-        const index = Number(indexInput) - 1;
-        if (!Number.isInteger(index) || index < 0 || index >= previewFeatures.length) {
-          output.write("Invalid feature number.\n");
-          continue;
-        }
-        const message = (await promptUser("Message about this feature: ")).trim();
-        if (!message) {
-          output.write("Message cannot be empty.\n");
-          continue;
-        }
-        featureMessages[index] = [...(featureMessages[index] || []), message];
-      } else if (choice === "s") {
-        if (!Array.isArray(previewStories) || previewStories.length === 0) {
-          output.write("No stories available yet.\n");
-          continue;
-        }
-        const storyId = (await promptUser("Story ID (e.g. US-001): ")).trim();
-        const storyExists = previewStories.some((story) => story.id === storyId);
-        if (!storyExists) {
-          output.write("Story ID not found.\n");
-          continue;
-        }
-        const message = (await promptUser(`Message about ${storyId}: `)).trim();
-        if (!message) {
-          output.write("Message cannot be empty.\n");
-          continue;
-        }
-        storyMessages[storyId] = [...(storyMessages[storyId] || []), message];
-      } else {
-        output.write("Choose f, s, n, /finish, or /restart.\n");
-        continue;
-      }
-
-      const refreshedFeedback = buildFeedback(
-        featureMessages,
-        storyMessages,
-        previewFeatures,
-        previewStories
-      );
-      const refreshedPreview = await generatePreview({
-        brief,
-        history,
-        summary,
-        feedback: refreshedFeedback
-      });
-      previewFeatures = refreshedPreview.features;
-      previewStories = refreshedPreview.userStories;
+    if (!skipPreview) {
+      const feedback = buildFeedback(featureMessages, storyMessages, previewFeatures, previewStories);
+      const preview = await generatePreview({ brief, history, summary, feedback });
+      previewFeatures = preview.features;
+      previewStories = preview.userStories;
       printPreview(previewFeatures, previewStories);
+    }
+
+    if (!skipPreview) {
+      let feedbackLoop = true;
+      while (feedbackLoop) {
+        const choice = (await promptUser("Add message? [f]eature, [s]tory, [n]ext, /finish, /restart: "))
+          .trim()
+          .toLowerCase();
+        if (!choice || choice === "n") {
+          feedbackLoop = false;
+          continue;
+        }
+        if (choice === "/restart") {
+          return { restart: true };
+        }
+        if (choice === "/finish") {
+          done = true;
+          feedbackLoop = false;
+          continue;
+        }
+        if (choice === "f") {
+          if (!Array.isArray(previewFeatures) || previewFeatures.length === 0) {
+            output.write("No features available yet.\n");
+            continue;
+          }
+          const indexInput = (await promptUser("Feature number: ")).trim();
+          const index = Number(indexInput) - 1;
+          if (!Number.isInteger(index) || index < 0 || index >= previewFeatures.length) {
+            output.write("Invalid feature number.\n");
+            continue;
+          }
+          const message = (await promptUser("Message about this feature: ")).trim();
+          if (!message) {
+            output.write("Message cannot be empty.\n");
+            continue;
+          }
+          featureMessages[index] = [...(featureMessages[index] || []), message];
+        } else if (choice === "s") {
+          if (!Array.isArray(previewStories) || previewStories.length === 0) {
+            output.write("No stories available yet.\n");
+            continue;
+          }
+          const storyId = (await promptUser("Story ID (e.g. US-001): ")).trim();
+          const storyExists = previewStories.some((story) => story.id === storyId);
+          if (!storyExists) {
+            output.write("Story ID not found.\n");
+            continue;
+          }
+          const message = (await promptUser(`Message about ${storyId}: `)).trim();
+          if (!message) {
+            output.write("Message cannot be empty.\n");
+            continue;
+          }
+          storyMessages[storyId] = [...(storyMessages[storyId] || []), message];
+        } else {
+          output.write("Choose f, s, n, /finish, or /restart.\n");
+          continue;
+        }
+
+        const refreshedFeedback = buildFeedback(
+          featureMessages,
+          storyMessages,
+          previewFeatures,
+          previewStories
+        );
+        const refreshedPreview = await generatePreview({
+          brief,
+          history,
+          summary,
+          feedback: refreshedFeedback
+        });
+        previewFeatures = refreshedPreview.features;
+        previewStories = refreshedPreview.userStories;
+        printPreview(previewFeatures, previewStories);
+      }
     }
   }
 
@@ -254,8 +267,10 @@ async function main() {
   rl = createInterface({ input, output });
   try {
     output.write("\nBriefKit PRD Interviewer (CLI)\n");
-    output.write("Describe the product, answer the interview, then export PRD + prd.json.\n\n");
+    output.write("Describe the product, answer the interview, then export PRD + prd.json.\n");
+    output.write("Preview updates after each answer. Use --skip-preview to disable.\n\n");
 
+    const skipPreview = process.argv.slice(2).includes("--skip-preview");
     const outputDirInput = (await promptUser(
       "Output directory for PRD + JSON (leave blank for current directory): "
     )).trim();
@@ -269,10 +284,10 @@ async function main() {
     }
 
     printDivider("Interview");
-    let interviewResult = await runInterview(brief);
+    let interviewResult = await runInterview(brief, { skipPreview });
     while (interviewResult?.restart) {
       output.write("\nRestarting interview...\n");
-      interviewResult = await runInterview(brief);
+      interviewResult = await runInterview(brief, { skipPreview });
     }
     const {
       history,
