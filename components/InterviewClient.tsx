@@ -33,6 +33,7 @@ type FeatureResult = {
   openQuestions: string[];
   prdMarkdown: string;
   prdJson: Record<string, unknown>;
+  promptMarkdown: string;
 };
 
 type InputMode = "record" | "type";
@@ -905,6 +906,12 @@ export default function InterviewClient() {
                     }
                   >
                     Download JSON
+                  </button>
+                  <button
+                    className="secondary"
+                    onClick={() => downloadFile(result.promptMarkdown, "prompt.md")}
+                  >
+                    Download Prompt
                   </button>
                 </div>
               </div>

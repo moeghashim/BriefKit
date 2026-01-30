@@ -9,7 +9,7 @@ import {
   generatePrdData,
   inferNamesFromBrief
 } from "../lib/openai.js";
-import { buildPrdJson, buildPrdMarkdown, resolveOutputPaths } from "../lib/prd.js";
+import { buildPrdJson, buildPrdMarkdown, buildPromptMarkdown, resolveOutputPaths } from "../lib/prd.js";
 import { safeJsonStringify } from "../lib/json.js";
 
 function printDivider(label) {
@@ -267,12 +267,12 @@ async function main() {
   rl = createInterface({ input, output });
   try {
     output.write("\nBriefKit PRD Interviewer (CLI)\n");
-    output.write("Describe the product, answer the interview, then export PRD + prd.json.\n");
+    output.write("Describe the product, answer the interview, then export PRD + prd.json + prompt.md.\n");
     output.write("Preview updates after each answer. Use --skip-preview to disable.\n\n");
 
     const skipPreview = process.argv.slice(2).includes("--skip-preview");
     const outputDirInput = (await promptUser(
-      "Output directory for PRD + JSON (leave blank for current directory): "
+      "Output directory for PRD + JSON + prompt.md (leave blank for current directory): "
     )).trim();
     const outputDir = outputDirInput
       ? path.resolve(outputDirInput)
@@ -340,7 +340,9 @@ async function main() {
       userStories: prdData.userStories
     });
 
-    const { tasksDir, prdPath, prdJsonPath } = resolveOutputPaths({
+    const promptMarkdown = buildPromptMarkdown();
+
+    const { tasksDir, prdPath, prdJsonPath, promptPath } = resolveOutputPaths({
       outputDir,
       featureName
     });
@@ -348,6 +350,7 @@ async function main() {
     await ensureDir(tasksDir);
     await fs.writeFile(prdPath, prdMarkdown, "utf8");
     await fs.writeFile(prdJsonPath, safeJsonStringify(prdJson), "utf8");
+    await fs.writeFile(promptPath, promptMarkdown, "utf8");
 
     printDivider("PRD MARKDOWN");
     output.write(`${prdMarkdown}\n`);
@@ -355,12 +358,16 @@ async function main() {
     printDivider("PRD JSON");
     output.write(`${safeJsonStringify(prdJson)}\n`);
 
+    printDivider("PROMPT MARKDOWN");
+    output.write(`${promptMarkdown}\n`);
+
     printDivider("MACHINE SUMMARY");
     const summaryJson = {
       ok: true,
       outputDir,
       prdPath,
       prdJsonPath,
+      promptPath,
       project: prdData.project || projectName,
       branchName: prdData.branchName || `feature/${featureName.toLowerCase().replace(/\s+/g, "-")}`,
       feature: featureName,

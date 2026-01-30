@@ -1,5 +1,5 @@
 import { generatePrdData, inferNamesFromBrief } from "../../../lib/openai.js";
-import { buildPrdJson, buildPrdMarkdown } from "../../../lib/prd.js";
+import { buildPrdJson, buildPrdMarkdown, buildPromptMarkdown } from "../../../lib/prd.js";
 
 export const runtime = "nodejs";
 
@@ -118,12 +118,15 @@ export async function POST(request: Request) {
       userStories: prdData.userStories
     });
 
+    const promptMarkdown = buildPromptMarkdown();
+
     return Response.json({
       ...prdData,
       featureName,
       features: mergedFeatures || prdData.features,
       prdMarkdown,
-      prdJson
+      prdJson,
+      promptMarkdown
     });
   } catch (error) {
     return Response.json({ error: "Generation failed" }, { status: 500 });
