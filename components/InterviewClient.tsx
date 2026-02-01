@@ -416,212 +416,440 @@ export default function InterviewClient() {
   const allowRecording = inputMode === "record";
   const allowTyping = inputMode === "type";
 
+  const renderSectionDivider = () => (
+    <div className="rule-row compact">
+      <div className="rule" />
+    </div>
+  );
+
+  const renderBriefHeader = () => (
+    <header className="simple-header">
+      <div className="mono">
+        {interviewStarted ? (showQuestionNumber ? `Question ${currentQuestionNumber}` : "Current Question") : "Brief"}
+      </div>
+      <h1 className={`hero-title${interviewStarted ? " question-title" : ""}`}>
+        {interviewStarted ? currentQuestion || "Preparing the first question..." : "Say what you want to build."}
+      </h1>
+    </header>
+  );
+
+  const renderBriefSection = () => (
+    <section className="section compact brief-section" id="brief">
+      <div className="container narrow">
+        {renderBriefHeader()}
+        {renderSectionDivider()}
+        {error && <p className="muted">{error}</p>}
+        {interviewStarted && (
+          <>
+            {interviewHistory.length > 0 && (
+              <details className="history-toggle">
+                <summary className="mono">Show previous answers</summary>
+                <div className="history-block">
+                  {interviewHistory.map((turn, index) => (
+                    <div key={`${turn.question}-${index}`} className="history-item">
+                      <div className="mono">Q{index + 1}</div>
+                      <p>{turn.question}</p>
+                      <div className="mono">A{index + 1}</div>
+                      <p>{turn.answer}</p>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+            {interviewSummary && interviewSummary.length > 0 && (
+              <div className="card" style={{ marginTop: "2rem" }}>
+                <div className="mono">Summary</div>
+                <ul>
+                  {interviewSummary.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </section>
+  );
+
+  const renderInputSection = () => (
+    <section className="fixed-input-area" id="interview" aria-label="Interview input">
+      <div className="container narrow" style={{ padding: "1.5rem" }}>
+        {!interviewDone ? (
+          <div className="chat-box" style={{ border: "none", padding: 0, background: "transparent" }}>
+            <div className="mode-toggle" role="group" aria-label="Input mode">
+              {INPUT_MODES.map((mode) => (
+                <button
+                  key={mode.id}
+                  type="button"
+                  className={`mode-button${inputMode === mode.id ? " active" : ""}`}
+                  onClick={() => setInputMode(mode.id)}
+                  aria-pressed={inputMode === mode.id}
+                >
+                  {mode.label}
+                </button>
+              ))}
+            </div>
+            {!interviewStarted ? (
+              <>
+                {allowRecording ? (
+                  <div className="record-panel">
+                    <button
+                      className={`mic-button hero${allowRecording ? "" : " disabled"}`}
+                      aria-label={recordingTarget === "brief" ? "Stop recording" : "Record brief"}
+                      onClick={() =>
+                        recordingTarget === "brief"
+                          ? stopRecording()
+                          : startAudioRecording("brief", (value) => setBrief(normalizeText(value)))
+                      }
+                      disabled={!allowRecording || transcribingTarget === "brief"}
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
+                        <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
+                        <path d="M12 19.5v2" />
+                        <path d="M8.5 21.5h7" />
+                      </svg>
+                    </button>
+                    <div className="record-panel-text mono">
+                      {recordingTarget === "brief" ? "Recording..." : "Tap to record your brief"}
+                    </div>
+                    {transcribingTarget === "brief" && <span className="mono">Transcribing...</span>}
+                  </div>
+                ) : (
+                  <textarea
+                    value={brief}
+                    onChange={(e) => setBrief(e.target.value)}
+                    placeholder="Describe the product or feature. Keep it short."
+                    readOnly={!allowTyping}
+                  />
+                )}
+                <div className="button-row">
+                  <button className="primary" onClick={() => handleStartInterview()} disabled={loadingInterview}>
+                    {loadingInterview ? "Starting..." : startButtonLabel}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {allowRecording ? (
+                  <div className="record-panel">
+                    <button
+                      className={`mic-button hero${allowRecording ? "" : " disabled"}`}
+                      aria-label={recordingTarget === "answer" ? "Stop recording answer" : "Record answer"}
+                      onClick={() =>
+                        recordingTarget === "answer"
+                          ? stopRecording()
+                          : startAudioRecording("answer", (value) => {
+                              setAnswerDraft(normalizeText(value));
+                            })
+                      }
+                      disabled={!allowRecording || transcribingTarget === "answer"}
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
+                        <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
+                        <path d="M12 19.5v2" />
+                        <path d="M8.5 21.5h7" />
+                      </svg>
+                    </button>
+                    <div className="record-panel-text mono">
+                      {recordingTarget === "answer" ? "Recording..." : "Tap to record your answer"}
+                    </div>
+                    {transcribingTarget === "answer" && <span className="mono">Transcribing...</span>}
+                  </div>
+                ) : (
+                  <textarea
+                    value={answerDraft}
+                    onChange={(e) => setAnswerDraft(e.target.value)}
+                    placeholder="Answer the current question."
+                    readOnly={!allowTyping}
+                  />
+                )}
+                <div className="button-row">
+                  <button className="primary" onClick={() => handleSendAnswer()} disabled={loadingInterview}>
+                    {loadingInterview ? "Waiting..." : "Send Answer"}
+                  </button>
+                  <button className="secondary" onClick={handleStopInterview} disabled={loadingInterview}>
+                    Finish Interview
+                  </button>
+                  <button className="ghost" onClick={handleRestartInterview} disabled={loadingInterview}>
+                    Restart
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="card">
+            <div className="mono">Interview Complete</div>
+            <p>Generate the PRD and exports when you are ready.</p>
+            <div className="button-row">
+              <button className="primary" onClick={handleGenerate} disabled={generating || loadingInterview}>
+                {generating ? "Generating..." : "Generate PRD"}
+              </button>
+              <button className="secondary" onClick={handleRestartInterview} disabled={loadingInterview}>
+                Restart Interview
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+
+  const renderFeatureTableSection = () => (
+    <section className="section">
+      <div className="container">
+        <h2 className="section-title feature-table-title">Feature Table</h2>
+        <p className="muted">Features and user stories update as the interview progresses.</p>
+        {displayFeatures.length > 0 ? (
+          displayFeatures.map((feature, index) => (
+            <details key={`${feature.name}-${index}`} className="feature-block" open={index === 0}>
+              <summary className="feature-summary-row">
+                <div className="feature-summary-header">
+                  <span className="feature-label mono">Feature {index + 1}</span>
+                  <span className="feature-name">{feature.name || `Feature ${index + 1}`}</span>
+                </div>
+                {feature.summary && <p className="feature-short">{feature.summary}</p>}
+              </summary>
+              <div className="feature-content">
+                {interviewDone && (
+                  <div className="message-panel">
+                    <div className="mono">Message about this feature</div>
+                    <div className="edit-control">
+                      <textarea
+                        value={featureMessageDrafts[index] || ""}
+                        onChange={(e) =>
+                          setFeatureMessageDrafts((prev) => ({
+                            ...prev,
+                            [index]: e.target.value
+                          }))
+                        }
+                        placeholder={
+                          inputMode === "record"
+                            ? "Recording mode: use the mic to capture a feature note."
+                            : "Type a note about this feature."
+                        }
+                        readOnly={!allowTyping}
+                      />
+                      <button
+                        className={`mic-button small${allowRecording ? "" : " disabled"}`}
+                        aria-label="Record feature message"
+                        onClick={() =>
+                          recordingTarget === `feature-message-${index}`
+                            ? stopRecording()
+                            : startAudioRecording(`feature-message-${index}`, (value) =>
+                                setFeatureMessageDrafts((prev) => ({
+                                  ...prev,
+                                  [index]: normalizeText(value)
+                                }))
+                              )
+                        }
+                        disabled={!allowRecording || transcribingTarget === `feature-message-${index}`}
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
+                          <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
+                          <path d="M12 19.5v2" />
+                          <path d="M8.5 21.5h7" />
+                        </svg>
+                      </button>
+                    </div>
+                    <div className="message-actions">
+                      <button className="secondary" onClick={() => sendFeatureMessage(index)} disabled={loadingPreview}>
+                        Send Message
+                      </button>
+                      {transcribingTarget === `feature-message-${index}` && (
+                        <span className="mono">Transcribing...</span>
+                      )}
+                    </div>
+                    {featureMessages[index] && featureMessages[index].length > 0 && (
+                      <ul className="message-list">
+                        {featureMessages[index].map((message, messageIndex) => (
+                          <li key={`${index}-feature-message-${messageIndex}`}>{message}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+                <table className="feature-table">
+                  <thead>
+                    <tr>
+                      <th>Story</th>
+                      <th>Description</th>
+                      <th>Acceptance Criteria</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {feature.userStoryIds.map((storyId) => {
+                      const story = storyLookup?.[storyId];
+                      if (!story) return null;
+                      return (
+                        <Fragment key={story.id}>
+                          <tr>
+                            <td>
+                              {story.id}: {story.title}
+                            </td>
+                            <td>{story.description}</td>
+                            <td>
+                              <ul>
+                                {story.acceptanceCriteria.map((item) => (
+                                  <li key={item}>{item}</li>
+                                ))}
+                              </ul>
+                            </td>
+                          </tr>
+                          <tr className="story-message-row">
+                            <td colSpan={3}>
+                              {interviewDone && (
+                                <div className="message-panel story-message">
+                                  <div className="mono">Message about {story.id}</div>
+                                  <div className="edit-control">
+                                    <textarea
+                                      value={storyMessageDrafts[story.id] || ""}
+                                      onChange={(e) =>
+                                        setStoryMessageDrafts((prev) => ({
+                                          ...prev,
+                                          [story.id]: e.target.value
+                                        }))
+                                      }
+                                      placeholder={
+                                        inputMode === "record"
+                                          ? "Recording mode: use the mic to capture a story note."
+                                          : "Type a note about this story."
+                                      }
+                                      readOnly={!allowTyping}
+                                    />
+                                    <button
+                                      className={`mic-button small${allowRecording ? "" : " disabled"}`}
+                                      aria-label={`Record message for ${story.id}`}
+                                      onClick={() =>
+                                        recordingTarget === `story-message-${story.id}`
+                                          ? stopRecording()
+                                          : startAudioRecording(`story-message-${story.id}`, (value) =>
+                                              setStoryMessageDrafts((prev) => ({
+                                                ...prev,
+                                                [story.id]: normalizeText(value)
+                                              }))
+                                            )
+                                      }
+                                      disabled={!allowRecording || transcribingTarget === `story-message-${story.id}`}
+                                    >
+                                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                                        <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
+                                        <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
+                                        <path d="M12 19.5v2" />
+                                        <path d="M8.5 21.5h7" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                  <div className="message-actions">
+                                    <button
+                                      className="secondary"
+                                      onClick={() => sendStoryMessage(story.id)}
+                                      disabled={loadingPreview}
+                                    >
+                                      Send Message
+                                    </button>
+                                    {transcribingTarget === `story-message-${story.id}` && (
+                                      <span className="mono">Transcribing...</span>
+                                    )}
+                                  </div>
+                                  {storyMessages[story.id] && storyMessages[story.id].length > 0 && (
+                                    <ul className="message-list">
+                                      {storyMessages[story.id].map((message, messageIndex) => (
+                                        <li key={`${story.id}-story-message-${messageIndex}`}>{message}</li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          ))
+        ) : (
+          <div className="card">
+            <div className="mono">Waiting for interview input</div>
+            <p>Answer a few questions to see features and stories appear here.</p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+
+  const renderExportsSection = () =>
+    result ? (
+      <section className="section">
+        <div className="container">
+          <h2 className="section-title">Exports</h2>
+          <div className="download-row">
+            <button
+              className="primary"
+              onClick={() => {
+                const filename = result.featureName ? `prd-${kebabCase(result.featureName)}.md` : "prd.md";
+                downloadFile(result.prdMarkdown, filename);
+              }}
+            >
+              Download PRD
+            </button>
+            <button
+              className="secondary"
+              onClick={() =>
+                downloadFile(JSON.stringify(result.prdJson, null, 2), "prd.json", "application/json")
+              }
+            >
+              Download JSON
+            </button>
+            <button className="secondary" onClick={() => downloadFile(result.promptMarkdown, "prompt.md")}>
+              Download Prompt
+            </button>
+          </div>
+        </div>
+      </section>
+    ) : null;
+
+  const renderFooter = () => (
+    <footer className="app-footer">
+      <div className="container narrow">
+        <div className="mono">BriefKit</div>
+        <p className="muted">Interview-driven PRDs with JSON + prompt exports.</p>
+      </div>
+    </footer>
+  );
+
   return (
     <main>
       <div className={`workspace${hasFirstAnswer ? " split" : ""}`}>
         <div className="workspace-left">
-          <div className="content-scroll-area">
-            <section className="section compact brief-section" id="brief">
-              <div className="container narrow">
-                {!interviewStarted ? (
-                  <>
-                    <div className="simple-header">
-                      <div className="mono">BriefKit</div>
-                      <h1 className="hero-title">Say what you want to build.</h1>
-                    </div>
-                    <div className="rule-row compact">
-                      <div className="rule" />
-                      <a
-                        className="repo-link mono"
-                        href="https://github.com/moeghashim/BriefKit"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Repo
-                      </a>
-                    </div>
-                    {error && <p className="muted">{error}</p>}
-                  </>
-                ) : (
-                  <>
-                    <div className="simple-header">
-                      <div className="mono">
-                        {showQuestionNumber ? `Question ${currentQuestionNumber}` : "Current Question"}
-                      </div>
-                      <h1 className="hero-title question-title">
-                        {currentQuestion || "Preparing the first question..."}
-                      </h1>
-                    </div>
-                    <div className="rule-row compact">
-                      <div className="rule" />
-                      <a
-                        className="repo-link mono"
-                        href="https://github.com/moeghashim/BriefKit"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Repo
-                      </a>
-                    </div>
-                    
-                    {interviewHistory.length > 0 && (
-                      <details className="history-toggle">
-                        <summary className="mono">Show previous answers</summary>
-                        <div className="history-block">
-                          {interviewHistory.map((turn, index) => (
-                            <div key={`${turn.question}-${index}`} className="history-item">
-                              <div className="mono">Q{index + 1}</div>
-                              <p>{turn.question}</p>
-                              <div className="mono">A{index + 1}</div>
-                              <p>{turn.answer}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </details>
-                    )}
-
-                    {interviewSummary && interviewSummary.length > 0 && (
-                      <div className="card" style={{ marginTop: "2rem" }}>
-                        <div className="mono">Summary</div>
-                        <ul>
-                          {interviewSummary.map((item) => (
-                            <li key={item}>{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    
-                    {error && <p className="muted">{error}</p>}
-                  </>
-                )}
-              </div>
-            </section>
-          </div>
-
-          <div className="fixed-input-area">
-            <div className="container narrow" style={{ padding: "1.5rem" }}>
-              {!interviewDone ? (
-                <div className="chat-box" style={{ border: "none", padding: 0, background: "transparent" }}>
-                  <div className="mode-toggle" role="group" aria-label="Input mode">
-                    {INPUT_MODES.map((mode) => (
-                      <button
-                        key={mode.id}
-                        type="button"
-                        className={`mode-button${inputMode === mode.id ? " active" : ""}`}
-                        onClick={() => setInputMode(mode.id)}
-                        aria-pressed={inputMode === mode.id}
-                      >
-                        {mode.label}
-                      </button>
-                    ))}
-                  </div>
-                  
-                  {!interviewStarted ? (
-                    <>
-                      {allowRecording ? (
-                        <div className="record-panel">
-                          <button
-                            className={`mic-button hero${allowRecording ? "" : " disabled"}`}
-                            aria-label={recordingTarget === "brief" ? "Stop recording" : "Record brief"}
-                            onClick={() =>
-                              recordingTarget === "brief"
-                                ? stopRecording()
-                                : startAudioRecording("brief", (value) => setBrief(normalizeText(value)))
-                            }
-                            disabled={!allowRecording || transcribingTarget === "brief"}
-                          >
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                              <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
-                              <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
-                              <path d="M12 19.5v2" />
-                              <path d="M8.5 21.5h7" />
-                            </svg>
-                          </button>
-                          <div className="record-panel-text mono">
-                            {recordingTarget === "brief" ? "Recording..." : "Tap to record your brief"}
-                          </div>
-                          {transcribingTarget === "brief" && <span className="mono">Transcribing...</span>}
-                        </div>
-                      ) : (
-                        <textarea
-                          value={brief}
-                          onChange={(e) => setBrief(e.target.value)}
-                          placeholder="Describe the product or feature. Keep it short."
-                          readOnly={!allowTyping}
-                        />
-                      )}
-                      <div className="button-row">
-                        <button className="primary" onClick={() => handleStartInterview()} disabled={loadingInterview}>
-                          {loadingInterview ? "Starting..." : startButtonLabel}
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      {allowRecording ? (
-                        <div className="record-panel">
-                          <button
-                            className={`mic-button hero${allowRecording ? "" : " disabled"}`}
-                            aria-label={recordingTarget === "answer" ? "Stop recording answer" : "Record answer"}
-                            onClick={() =>
-                              recordingTarget === "answer"
-                                ? stopRecording()
-                                : startAudioRecording("answer", (value) => {
-                                    setAnswerDraft(normalizeText(value));
-                                  })
-                            }
-                            disabled={!allowRecording || transcribingTarget === "answer"}
-                          >
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                              <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
-                              <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
-                              <path d="M12 19.5v2" />
-                              <path d="M8.5 21.5h7" />
-                            </svg>
-                          </button>
-                          <div className="record-panel-text mono">
-                            {recordingTarget === "answer" ? "Recording..." : "Tap to record your answer"}
-                          </div>
-                          {transcribingTarget === "answer" && <span className="mono">Transcribing...</span>}
-                        </div>
-                      ) : (
-                        <textarea
-                          value={answerDraft}
-                          onChange={(e) => setAnswerDraft(e.target.value)}
-                          placeholder="Answer the current question."
-                          readOnly={!allowTyping}
-                        />
-                      )}
-                      <div className="button-row">
-                        <button className="primary" onClick={() => handleSendAnswer()} disabled={loadingInterview}>
-                          {loadingInterview ? "Waiting..." : "Send Answer"}
-                        </button>
-                        <button className="secondary" onClick={handleStopInterview} disabled={loadingInterview}>
-                          Finish Interview
-                        </button>
-                        <button className="ghost" onClick={handleRestartInterview} disabled={loadingInterview}>
-                          Restart
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ) : (
-                <div className="card">
-                  <div className="mono">Interview Complete</div>
-                  <p>Generate the PRD and exports when you are ready.</p>
-                  <div className="button-row">
-                     <button className="primary" onClick={handleGenerate} disabled={generating || loadingInterview}>
-                      {generating ? "Generating..." : "Generate PRD"}
-                    </button>
-                    <button className="secondary" onClick={handleRestartInterview} disabled={loadingInterview}>
-                      Restart Interview
-                    </button>
-                  </div>
-                </div>
-              )}
+          <header className="app-header">
+            <div className="container narrow app-header-inner">
+              <div className="mono">BriefKit</div>
+              <nav aria-label="Primary">
+                <a
+                  className="repo-link mono"
+                  href="https://github.com/moeghashim/BriefKit"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Repo
+                </a>
+              </nav>
             </div>
+          </header>
+          <div className="content-scroll-area">
+            {renderBriefSection()}
+            {renderFooter()}
           </div>
+
+          {renderInputSection()}
         </div>
 
         <div className={`workspace-right${loadingPreview ? " is-loading" : ""}`}>
@@ -686,237 +914,8 @@ export default function InterviewClient() {
               </div>
             </div>
           )}
-          <section className="section">
-            <div className="container">
-              <h2 className="section-title feature-table-title">Feature Table</h2>
-              <p className="muted">
-                Features and user stories update as the interview progresses.
-              </p>
-              {displayFeatures.length > 0 ? (
-                displayFeatures.map((feature, index) => (
-                  <details
-                    key={`${feature.name}-${index}`}
-                    className="feature-block"
-                    open={index === 0}
-                  >
-                    <summary className="feature-summary-row">
-                      <div className="feature-summary-header">
-                        <span className="feature-label mono">Feature {index + 1}</span>
-                        <span className="feature-name">{feature.name || `Feature ${index + 1}`}</span>
-                      </div>
-                      {feature.summary && <p className="feature-short">{feature.summary}</p>}
-                    </summary>
-                    <div className="feature-content">
-                      {interviewDone && (
-                        <div className="message-panel">
-                          <div className="mono">Message about this feature</div>
-                          <div className="edit-control">
-                            <textarea
-                              value={featureMessageDrafts[index] || ""}
-                              onChange={(e) =>
-                                setFeatureMessageDrafts((prev) => ({
-                                  ...prev,
-                                  [index]: e.target.value
-                                }))
-                              }
-                              placeholder={
-                                inputMode === "record"
-                                  ? "Recording mode: use the mic to capture a feature note."
-                                  : "Type a note about this feature."
-                              }
-                              readOnly={!allowTyping}
-                            />
-                            <button
-                              className={`mic-button small${allowRecording ? "" : " disabled"}`}
-                              aria-label="Record feature message"
-                              onClick={() =>
-                                recordingTarget === `feature-message-${index}`
-                                  ? stopRecording()
-                                  : startAudioRecording(`feature-message-${index}`, (value) =>
-                                      setFeatureMessageDrafts((prev) => ({
-                                        ...prev,
-                                        [index]: normalizeText(value)
-                                      }))
-                                    )
-                              }
-                              disabled={!allowRecording || transcribingTarget === `feature-message-${index}`}
-                            >
-                              <svg viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
-                                <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
-                                <path d="M12 19.5v2" />
-                                <path d="M8.5 21.5h7" />
-                              </svg>
-                            </button>
-                          </div>
-                          <div className="message-actions">
-                            <button
-                              className="secondary"
-                              onClick={() => sendFeatureMessage(index)}
-                              disabled={loadingPreview}
-                            >
-                              Send Message
-                            </button>
-                            {transcribingTarget === `feature-message-${index}` && (
-                              <span className="mono">Transcribing...</span>
-                            )}
-                          </div>
-                          {featureMessages[index] && featureMessages[index].length > 0 && (
-                            <ul className="message-list">
-                              {featureMessages[index].map((message, messageIndex) => (
-                                <li key={`${index}-feature-message-${messageIndex}`}>{message}</li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-                      )}
-                      <table className="feature-table">
-                      <thead>
-                        <tr>
-                          <th>Story</th>
-                          <th>Description</th>
-                          <th>Acceptance Criteria</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {feature.userStoryIds.map((storyId) => {
-                          const story = storyLookup?.[storyId];
-                          if (!story) return null;
-                          return (
-                            <Fragment key={story.id}>
-                              <tr>
-                                <td>
-                                  {story.id}: {story.title}
-                                </td>
-                                <td>{story.description}</td>
-                                <td>
-                                  <ul>
-                                    {story.acceptanceCriteria.map((item) => (
-                                      <li key={item}>{item}</li>
-                                    ))}
-                                  </ul>
-                                </td>
-                              </tr>
-                              <tr className="story-message-row">
-                                <td colSpan={3}>
-                                  {interviewDone && (
-                                    <div className="message-panel story-message">
-                                      <div className="mono">Message about {story.id}</div>
-                                      <div className="edit-control">
-                                        <textarea
-                                          value={storyMessageDrafts[story.id] || ""}
-                                          onChange={(e) =>
-                                            setStoryMessageDrafts((prev) => ({
-                                              ...prev,
-                                              [story.id]: e.target.value
-                                            }))
-                                          }
-                                          placeholder={
-                                            inputMode === "record"
-                                              ? "Recording mode: use the mic to capture a story note."
-                                              : "Type a note about this story."
-                                          }
-                                          readOnly={!allowTyping}
-                                        />
-                                        <button
-                                          className={`mic-button small${allowRecording ? "" : " disabled"}`}
-                                          aria-label={`Record message for ${story.id}`}
-                                          onClick={() =>
-                                            recordingTarget === `story-message-${story.id}`
-                                              ? stopRecording()
-                                              : startAudioRecording(`story-message-${story.id}`, (value) =>
-                                                  setStoryMessageDrafts((prev) => ({
-                                                    ...prev,
-                                                    [story.id]: normalizeText(value)
-                                                  }))
-                                                )
-                                          }
-                                          disabled={!allowRecording || transcribingTarget === `story-message-${story.id}`}
-                                        >
-                                          <svg viewBox="0 0 24 24" aria-hidden="true">
-                                            <path d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v6a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5Z" />
-                                            <path d="M5 11.5v.5a7 7 0 1 0 14 0v-.5" />
-                                            <path d="M12 19.5v2" />
-                                            <path d="M8.5 21.5h7" />
-                                          </svg>
-                                        </button>
-                                      </div>
-                                      <div className="message-actions">
-                                        <button
-                                          className="secondary"
-                                          onClick={() => sendStoryMessage(story.id)}
-                                          disabled={loadingPreview}
-                                        >
-                                          Send Message
-                                        </button>
-                                        {transcribingTarget === `story-message-${story.id}` && (
-                                          <span className="mono">Transcribing...</span>
-                                        )}
-                                      </div>
-                                      {storyMessages[story.id] && storyMessages[story.id].length > 0 && (
-                                        <ul className="message-list">
-                                          {storyMessages[story.id].map((message, messageIndex) => (
-                                            <li key={`${story.id}-story-message-${messageIndex}`}>
-                                              {message}
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      )}
-                                    </div>
-                                  )}
-                                </td>
-                              </tr>
-                            </Fragment>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                    </div>
-                  </details>
-                ))
-              ) : (
-                <div className="card">
-                  <div className="mono">Waiting for interview input</div>
-                  <p>Answer a few questions to see features and stories appear here.</p>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {result && (
-            <section className="section">
-              <div className="container">
-                <h2 className="section-title">Exports</h2>
-                <div className="download-row">
-                  <button
-                    className="primary"
-                    onClick={() => {
-                      const filename = result.featureName
-                        ? `prd-${kebabCase(result.featureName)}.md`
-                        : "prd.md";
-                      downloadFile(result.prdMarkdown, filename);
-                    }}
-                  >
-                    Download PRD
-                  </button>
-                  <button
-                    className="secondary"
-                    onClick={() =>
-                      downloadFile(JSON.stringify(result.prdJson, null, 2), "prd.json", "application/json")
-                    }
-                  >
-                    Download JSON
-                  </button>
-                  <button
-                    className="secondary"
-                    onClick={() => downloadFile(result.promptMarkdown, "prompt.md")}
-                  >
-                    Download Prompt
-                  </button>
-                </div>
-              </div>
-            </section>
-          )}
+          {renderFeatureTableSection()}
+          {renderExportsSection()}
         </div>
       </div>
     </main>

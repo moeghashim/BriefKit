@@ -261,6 +261,18 @@ textarea {
   transform: translateY(0);
 }
 
+.app-header {
+  border-bottom: 1px solid var(--border-light);
+  background: var(--background);
+}
+
+.app-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 0;
+}
+
 .container {
   max-width: 72rem;
   margin: 0 auto;
@@ -358,6 +370,12 @@ textarea {
 
 .repo-link:hover {
   border-bottom: 1px solid var(--foreground);
+}
+
+.app-footer {
+  border-top: 1px solid var(--border-light);
+  padding: 1.5rem 0 2rem;
+  margin-top: 1.5rem;
 }
 
 .card {
