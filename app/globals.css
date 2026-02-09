@@ -11,6 +11,10 @@
   --card: #ffffff;
   --card-foreground: #000000;
   --ring: #000000;
+  /* Avoid build-time network font fetches; keep the same variable API used in the CSS. */
+  --font-display: "Palatino Linotype", Palatino, Georgia, serif;
+  --font-body: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 *,
