@@ -41,7 +41,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000` to record interview answers, transcribe with Whisper, and generate the PRD + feature table.
+Open `http://localhost:3000` to type interview answers and generate the PRD + feature table.
 
 ## Environment
 

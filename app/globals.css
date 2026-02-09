@@ -500,37 +500,6 @@ textarea {
   margin-bottom: 2rem;
 }
 
-.mode-toggle {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  padding: 0.35rem;
-  border: 1px solid var(--border-light);
-  border-radius: 999px;
-  margin-bottom: 1.5rem;
-  background: var(--surface);
-}
-
-.mode-button {
-  padding: 0.65rem 1.75rem;
-  font-size: 0.75rem;
-  letter-spacing: 0.12em;
-  min-height: 44px;
-  border-radius: 999px;
-  border: 2px solid transparent;
-  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
-}
-
-.mode-button.active {
-  background: var(--foreground);
-  color: var(--background);
-  border-color: var(--foreground);
-}
-
-.mode-button:not(.active):hover {
-  background: var(--muted);
-}
-
 .history-block {
   border: 1px solid var(--border-light);
   padding: 1.5rem;
@@ -575,23 +544,6 @@ textarea {
   padding: 1rem;
 }
 
-.record-panel {
-  min-height: var(--input-panel-height);
-  height: var(--input-panel-height);
-  border: 1px solid var(--border-light);
-  padding: 1rem;
-  display: grid;
-  place-items: center;
-  gap: 0.75rem;
-  background: var(--surface);
-  text-align: center;
-  width: 100%;
-}
-
-.record-panel-text {
-  color: var(--muted-foreground);
-}
-
 .chat-box textarea:focus {
   border: 2px solid var(--foreground);
 }
@@ -608,52 +560,6 @@ textarea {
   stroke: currentColor;
   fill: none;
   stroke-width: 1.5;
-}
-
-.mic-button {
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border: 1px solid var(--border-light);
-  background: transparent;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 160ms ease, transform 160ms ease, opacity 160ms ease;
-}
-
-.mic-button svg {
-  width: 20px;
-  height: 20px;
-  stroke: currentColor;
-  fill: none;
-  stroke-width: 1.5;
-}
-
-.mic-button.small {
-  width: 34px;
-  height: 34px;
-}
-
-.mic-button.small svg {
-  width: 16px;
-  height: 16px;
-}
-
-.mic-button.hero {
-  width: 72px;
-  height: 72px;
-}
-
-.mic-button.hero svg {
-  width: 30px;
-  height: 30px;
-}
-
-.mic-button.disabled {
-  opacity: 0.45;
-  border-style: dashed;
-  cursor: not-allowed;
 }
 
 .edit-control {
